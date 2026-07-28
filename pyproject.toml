@@ -29,6 +29,7 @@ classifiers = [
 ]
 dependencies = [
     "cascaqit>=1.0.5a,<1.1",
+    "jsonschema>=4.18,<5",
 ]
 
 [project.optional-dependencies]
@@ -42,6 +43,7 @@ test = [
     "packaging>=24",
     "pytest>=8,<9",
     "ruff>=0.9",
+    "types-jsonschema>=4.0",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -61,6 +63,7 @@ include = [
     "package.json",
     "pyproject.toml",
     "tsconfig.json",
+    "tsconfig.test.json",
 ]
 
 [tool.hatch.build.hooks.jupyter-builder]

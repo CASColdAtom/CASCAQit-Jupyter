@@ -15,7 +15,8 @@
     "build:lib": "tsc --build --force",
     "build:prod": "npm run clean && npm run build:lib && npm run build:labextension",
     "clean": "rimraf lib src/cascaqit_jupyter/labextension",
-    "typecheck": "tsc --noEmit"
+    "test:frontend": "vitest run",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json"
   },
   "dependencies": {
     "@jupyterlab/rendermime-interfaces": "^3.13.10",
@@ -24,7 +25,8 @@
   "devDependencies": {
     "@jupyterlab/builder": "^4.5.10",
     "rimraf": "^6.1.2",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.17"
   },
   "overrides": {
     "@jupyterlab/builder": {

@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": false,
+    "noEmit": true,
+    "rootDir": ".",
+    "types": [
+      "vitest/globals"
+    ]
+  },
+  "include": [
+    "labextension/src/**/*.ts",
+    "labextension/test/**/*.ts"
+  ]
+}

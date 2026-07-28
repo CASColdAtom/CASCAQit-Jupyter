@@ -1,0 +1,232 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cascaqit.dev/schemas/jupyter/editor-document-v1.schema.json",
+  "title": "CASCAQit EditorDocumentIR v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "document_id",
+    "revision",
+    "program_kind",
+    "editor_model",
+    "generated_source_hash",
+    "generated_cell_id",
+    "compile_status",
+    "source_program_hash",
+    "metadata"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "document_id": { "$ref": "#/$defs/nonEmptyId" },
+    "revision": { "type": "integer", "minimum": 0 },
+    "program_kind": { "enum": ["digital", "analog", "hybrid"] },
+    "editor_model": { "type": "object" },
+    "generated_source_hash": { "$ref": "#/$defs/nullableHash" },
+    "generated_cell_id": {
+      "oneOf": [
+        { "$ref": "#/$defs/nonEmptyId" },
+        { "type": "null" }
+      ]
+    },
+    "compile_status": {
+      "enum": [
+        "draft",
+        "invalid",
+        "ready",
+        "running",
+        "completed",
+        "failed",
+        "cancelled",
+        "detached"
+      ]
+    },
+    "source_program_hash": { "$ref": "#/$defs/nullableHash" },
+    "metadata": { "type": "object" }
+  },
+  "allOf": [
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "program_kind": { "const": "digital" },
+            "editor_model": { "$ref": "#/$defs/digitalModel" }
+          }
+        },
+        {
+          "properties": {
+            "program_kind": { "const": "analog" },
+            "editor_model": { "$ref": "#/$defs/analogModel" }
+          }
+        },
+        {
+          "properties": {
+            "program_kind": { "const": "hybrid" },
+            "editor_model": { "$ref": "#/$defs/hybridModel" }
+          }
+        }
+      ]
+    }
+  ],
+  "$defs": {
+    "nonEmptyId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "nullableHash": {
+      "oneOf": [
+        { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        { "type": "null" }
+      ]
+    },
+    "digitalModel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["model_type", "qubits", "gates", "measurement"],
+      "properties": {
+        "model_type": { "const": "digital" },
+        "qubits": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id"],
+            "properties": {
+              "id": { "$ref": "#/$defs/nonEmptyId" },
+              "label": { "type": "string", "maxLength": 256 }
+            }
+          }
+        },
+        "gates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "gate", "targets", "parameters"],
+            "properties": {
+              "id": { "$ref": "#/$defs/nonEmptyId" },
+              "gate": { "$ref": "#/$defs/nonEmptyId" },
+              "targets": {
+                "type": "array",
+                "minItems": 1,
+                "items": { "$ref": "#/$defs/nonEmptyId" }
+              },
+              "parameters": {
+                "type": "object",
+                "additionalProperties": {
+                  "oneOf": [
+                    { "type": "number" },
+                    { "type": "string", "minLength": 1 }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "measurement": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["terminal", "key"],
+          "properties": {
+            "terminal": { "type": "boolean" },
+            "key": { "$ref": "#/$defs/nonEmptyId" }
+          }
+        }
+      }
+    },
+    "waveformSegment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "duration", "start_value", "end_value"],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonEmptyId" },
+        "duration": { "type": "number", "exclusiveMinimum": 0 },
+        "start_value": { "type": "number" },
+        "end_value": { "type": "number" }
+      }
+    },
+    "waveformChannel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["segments"],
+      "properties": {
+        "segments": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/waveformSegment" }
+        }
+      }
+    },
+    "analogModel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["model_type", "register", "controls", "measurement"],
+      "properties": {
+        "model_type": { "const": "analog" },
+        "register": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["coordinate_unit", "sites"],
+          "properties": {
+            "coordinate_unit": { "const": "um" },
+            "sites": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["id", "x", "y", "occupied"],
+                "properties": {
+                  "id": { "$ref": "#/$defs/nonEmptyId" },
+                  "x": { "type": "number" },
+                  "y": { "type": "number" },
+                  "occupied": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        },
+        "controls": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["rabi", "detuning", "phase"],
+          "properties": {
+            "rabi": { "$ref": "#/$defs/waveformChannel" },
+            "detuning": { "$ref": "#/$defs/waveformChannel" },
+            "phase": { "$ref": "#/$defs/waveformChannel" }
+          }
+        },
+        "measurement": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled"],
+          "properties": {
+            "enabled": { "type": "boolean" }
+          }
+        }
+      }
+    },
+    "hybridModel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["model_type", "blocks"],
+      "properties": {
+        "model_type": { "const": "hybrid" },
+        "blocks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "block_type", "document_id"],
+            "properties": {
+              "id": { "$ref": "#/$defs/nonEmptyId" },
+              "block_type": { "enum": ["digital", "analog", "measure"] },
+              "document_id": { "$ref": "#/$defs/nonEmptyId" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

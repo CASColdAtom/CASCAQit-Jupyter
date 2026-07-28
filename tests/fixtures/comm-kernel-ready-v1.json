@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0",
+  "message_type": "event",
+  "document_id": "__kernel__",
+  "document_revision": 0,
+  "kernel_epoch": "epoch-1",
+  "event": "kernel_ready",
+  "payload": {
+    "comm_target": "cascaqit.jupyter.v1",
+    "operations": ["ping", "validate_document", "cancel"],
+    "cooperative_cancel": true
+  }
+}

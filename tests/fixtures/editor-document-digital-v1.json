@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0",
+  "document_id": "document.digital.bell",
+  "revision": 0,
+  "program_kind": "digital",
+  "editor_model": {
+    "model_type": "digital",
+    "qubits": [
+      { "id": "q0" },
+      { "id": "q1" }
+    ],
+    "gates": [
+      {
+        "id": "g0",
+        "gate": "h",
+        "targets": ["q0"],
+        "parameters": {}
+      },
+      {
+        "id": "g1",
+        "gate": "cx",
+        "targets": ["q0", "q1"],
+        "parameters": {}
+      }
+    ],
+    "measurement": {
+      "terminal": true,
+      "key": "m"
+    }
+  },
+  "generated_source_hash": null,
+  "generated_cell_id": null,
+  "compile_status": "draft",
+  "source_program_hash": null,
+  "metadata": {}
+}

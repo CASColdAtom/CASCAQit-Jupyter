@@ -16,6 +16,7 @@ from cascaqit_jupyter import (
     display_result,
     display_visualization,
 )
+from cascaqit_jupyter.schema import validate_contract
 
 
 @pytest.fixture
@@ -43,6 +44,7 @@ def test_public_program_contract_produces_versioned_json(bell_circuit: Circuit) 
     json.dumps(payload)
     assert "text/html" not in bundle
     assert "application/javascript" not in bundle
+    validate_contract("mime", payload)
 
 
 def test_result_and_visualization_preserve_source_identity(
@@ -63,6 +65,8 @@ def test_result_and_visualization_preserve_source_identity(
     assert isinstance(visualization_payload, dict)
     assert visualization_payload["source"]["id"] == histogram.spec.visualization_id
     assert visualization_payload["data"] == histogram.to_dict()
+    validate_contract("mime", result_payload)
+    validate_contract("mime", visualization_payload)
 
 
 def test_diagnostics_keep_machine_fields_and_filter_mime_bundle() -> None:
@@ -86,6 +90,7 @@ def test_diagnostics_keep_machine_fields_and_filter_mime_bundle() -> None:
     assert payload["data"]["items"][0]["object_path"] == "circuit.gates[0]"
     assert payload["data"]["items"][0]["suggestion"]
     assert "text/plain" not in display._repr_mimebundle_(exclude={"text/plain"})
+    validate_contract("mime", payload)
 
 
 def test_display_rejects_non_contract_values() -> None:

@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cascaqit.dev/schemas/jupyter/mime-v1.schema.json",
+  "title": "CASCAQit Jupyter MIME payload v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version",
+    "kind",
+    "source",
+    "cascaqit_schema_version",
+    "data"
+  ],
+  "properties": {
+    "protocol_version": { "const": "1.0" },
+    "kind": {
+      "enum": ["program", "result", "diagnostics", "visualization"]
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "hash"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "cascaqit_schema_version": {
+      "oneOf": [
+        { "type": "string", "minLength": 1 },
+        { "type": "null" }
+      ]
+    },
+    "data": { "type": "object" }
+  }
+}

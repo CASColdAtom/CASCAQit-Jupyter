@@ -27,6 +27,6 @@ display(display_result(result))
 display(display_visualization(build_counts_histogram(result)))
 ```
 
-The renderer creates text-only DOM nodes from versioned JSON payloads; it does not execute HTML or JavaScript carried by a result. This preview is read-only. The comm protocol, Job controls, Digital editor, Analog register/waveform editor, save/reopen synchronization, and `detached` conflict workflow are not implemented yet.
+The renderer creates text-only DOM nodes from versioned JSON payloads; it does not execute HTML or JavaScript carried by a result. This preview is read-only. Versioned `EditorDocumentIR`, MIME, and low-level kernel comm contracts are available, including kernel-epoch, document-revision, timeout, and cooperative-cancel semantics, but the renderer does not open that comm automatically yet. Job execution controls, the Digital editor, the Analog register/waveform editor, save/reopen synchronization, and the `detached` conflict workflow are not implemented yet.
 
 The implementation consumes released public CASCAQit APIs only. It does not import `cascaqit._internal`, depend on `cascaqit-compat`, copy simulator code, contact live hardware or CASCAQit Cloud, or depend on CASCAQit-Skills.

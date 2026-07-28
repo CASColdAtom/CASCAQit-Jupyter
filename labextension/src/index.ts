@@ -3,6 +3,8 @@ import { Widget } from '@lumino/widgets';
 
 import '../labextension/style/index.css';
 
+export { RequestTracker } from './protocol';
+
 const MIME_TYPES = [
   'application/vnd.cascaqit.program+json',
   'application/vnd.cascaqit.result+json',

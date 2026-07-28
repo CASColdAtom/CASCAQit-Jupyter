@@ -1,0 +1,180 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cascaqit.dev/schemas/jupyter/comm-v1.schema.json",
+  "title": "CASCAQit Jupyter comm protocol v1",
+  "oneOf": [
+    { "$ref": "#/$defs/request" },
+    { "$ref": "#/$defs/response" },
+    { "$ref": "#/$defs/event" }
+  ],
+  "$defs": {
+    "nonEmptyId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "base": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "message_type",
+        "document_id",
+        "document_revision",
+        "kernel_epoch"
+      ],
+      "properties": {
+        "schema_version": { "const": "1.0" },
+        "message_type": { "type": "string" },
+        "document_id": { "$ref": "#/$defs/nonEmptyId" },
+        "document_revision": { "type": "integer", "minimum": 0 },
+        "kernel_epoch": { "$ref": "#/$defs/nonEmptyId" }
+      }
+    },
+    "request": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schema_version",
+            "message_type",
+            "request_id",
+            "document_id",
+            "document_revision",
+            "kernel_epoch",
+            "operation",
+            "timeout_ms",
+            "payload"
+          ],
+          "properties": {
+            "schema_version": { "const": "1.0" },
+            "message_type": { "const": "request" },
+            "request_id": { "$ref": "#/$defs/nonEmptyId" },
+            "document_id": { "$ref": "#/$defs/nonEmptyId" },
+            "document_revision": { "type": "integer", "minimum": 0 },
+            "kernel_epoch": { "$ref": "#/$defs/nonEmptyId" },
+            "operation": {
+              "enum": ["ping", "validate_document", "cancel"]
+            },
+            "timeout_ms": {
+              "type": "integer",
+              "minimum": 100,
+              "maximum": 600000
+            },
+            "payload": { "type": "object" }
+          }
+        }
+      ]
+    },
+    "protocolError": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "stage",
+        "object_path",
+        "suggestion",
+        "retryable",
+        "details"
+      ],
+      "properties": {
+        "code": { "$ref": "#/$defs/nonEmptyId" },
+        "message": { "$ref": "#/$defs/nonEmptyId" },
+        "stage": { "enum": ["protocol", "validation", "kernel"] },
+        "object_path": {
+          "oneOf": [
+            { "type": "string", "minLength": 1 },
+            { "type": "null" }
+          ]
+        },
+        "suggestion": {
+          "oneOf": [
+            { "type": "string", "minLength": 1 },
+            { "type": "null" }
+          ]
+        },
+        "retryable": { "type": "boolean" },
+        "details": { "type": "object" }
+      }
+    },
+    "response": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schema_version",
+            "message_type",
+            "request_id",
+            "document_id",
+            "document_revision",
+            "kernel_epoch",
+            "status",
+            "payload",
+            "error"
+          ],
+          "properties": {
+            "schema_version": { "const": "1.0" },
+            "message_type": { "const": "response" },
+            "request_id": { "$ref": "#/$defs/nonEmptyId" },
+            "document_id": { "$ref": "#/$defs/nonEmptyId" },
+            "document_revision": { "type": "integer", "minimum": 0 },
+            "kernel_epoch": { "$ref": "#/$defs/nonEmptyId" },
+            "status": { "enum": ["ok", "error"] },
+            "payload": { "type": "object" },
+            "error": {
+              "oneOf": [
+                { "$ref": "#/$defs/protocolError" },
+                { "type": "null" }
+              ]
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": { "status": { "const": "ok" } },
+                "required": ["status"]
+              },
+              "then": { "properties": { "error": { "type": "null" } } },
+              "else": {
+                "properties": {
+                  "error": { "$ref": "#/$defs/protocolError" }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "event": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schema_version",
+            "message_type",
+            "document_id",
+            "document_revision",
+            "kernel_epoch",
+            "event",
+            "payload"
+          ],
+          "properties": {
+            "schema_version": { "const": "1.0" },
+            "message_type": { "const": "event" },
+            "document_id": { "$ref": "#/$defs/nonEmptyId" },
+            "document_revision": { "type": "integer", "minimum": 0 },
+            "kernel_epoch": { "$ref": "#/$defs/nonEmptyId" },
+            "event": { "const": "kernel_ready" },
+            "payload": { "type": "object" }
+          }
+        }
+      ]
+    }
+  }
+}
