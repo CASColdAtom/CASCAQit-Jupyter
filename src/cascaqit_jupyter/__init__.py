@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+from cascaqit_jupyter.analog_compile import (
+    AnalogCompileError,
+    AnalogCompileResult,
+    compile_analog_document,
+)
 from cascaqit_jupyter.comm import COMM_TARGET, KernelSession, register_kernel_comm
 from cascaqit_jupyter.compile import (
     CELL_METADATA_KEY,
@@ -33,6 +38,8 @@ __all__ = [
     "RESULT_MIME",
     "VISUALIZATION_MIME",
     "EditorDocumentIR",
+    "AnalogCompileError",
+    "AnalogCompileResult",
     "DigitalCompileError",
     "DigitalCompileResult",
     "KernelSession",
@@ -42,6 +49,7 @@ __all__ = [
     "display_visualization",
     "build_cell_metadata",
     "compile_digital_document",
+    "compile_analog_document",
     "register_kernel_comm",
     "source_hash",
 ]

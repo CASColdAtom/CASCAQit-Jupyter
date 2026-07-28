@@ -3,9 +3,11 @@ import { ICommandPalette, ToolbarButton } from '@jupyterlab/apputils';
 import { INotebookTracker, NotebookPanel } from '@jupyterlab/notebook';
 
 import '../labextension/style/index.css';
+import { AnalogEditorWidget } from './analog_editor';
 import { DigitalEditorWidget } from './digital_editor';
 
-const COMMAND = 'cascaqit:open-digital-editor';
+const DIGITAL_COMMAND = 'cascaqit:open-digital-editor';
+const ANALOG_COMMAND = 'cascaqit:open-analog-editor';
 
 const plugin: JupyterFrontEndPlugin<void> = {
   id: '@cascaqit/jupyter:digital-editor',
@@ -17,37 +19,71 @@ const plugin: JupyterFrontEndPlugin<void> = {
     notebooks: INotebookTracker,
     palette: ICommandPalette | null
   ): void => {
-    let editor: DigitalEditorWidget | null = null;
-    const open = async (): Promise<void> => {
-      if (editor === null || editor.isDisposed) {
-        editor = new DigitalEditorWidget({ panel: () => notebooks.currentWidget });
-        app.shell.add(editor, 'left', { rank: 900 });
+    let digitalEditor: DigitalEditorWidget | null = null;
+    let analogEditor: AnalogEditorWidget | null = null;
+    const openDigital = async (): Promise<void> => {
+      if (digitalEditor === null || digitalEditor.isDisposed) {
+        digitalEditor = new DigitalEditorWidget({
+          panel: () => notebooks.currentWidget
+        });
+        app.shell.add(digitalEditor, 'left', { rank: 900 });
       }
-      await editor.bindPanel(notebooks.currentWidget);
-      app.shell.activateById(editor.id);
+      await digitalEditor.bindPanel(notebooks.currentWidget);
+      app.shell.activateById(digitalEditor.id);
+    };
+    const openAnalog = async (): Promise<void> => {
+      if (analogEditor === null || analogEditor.isDisposed) {
+        analogEditor = new AnalogEditorWidget({
+          panel: () => notebooks.currentWidget
+        });
+        app.shell.add(analogEditor, 'left', { rank: 901 });
+      }
+      await analogEditor.bindPanel(notebooks.currentWidget);
+      app.shell.activateById(analogEditor.id);
     };
 
-    app.commands.addCommand(COMMAND, {
+    app.commands.addCommand(DIGITAL_COMMAND, {
       label: 'CASCAQit: Open Digital Editor',
       caption: 'Open the CASCAQit visual Digital circuit editor',
       isEnabled: () => notebooks.currentWidget !== null,
-      execute: open
+      execute: openDigital
+    });
+    app.commands.addCommand(ANALOG_COMMAND, {
+      label: 'CASCAQit: Open Analog Editor',
+      caption: 'Open the CASCAQit atom register and waveform editor',
+      isEnabled: () => notebooks.currentWidget !== null,
+      execute: openAnalog
     });
     app.commands.addKeyBinding({
-      command: COMMAND,
+      command: DIGITAL_COMMAND,
       keys: ['Alt Shift Q'],
       selector: '.jp-Notebook'
     });
-    palette?.addItem({ command: COMMAND, category: 'CASCAQit' });
+    app.commands.addKeyBinding({
+      command: ANALOG_COMMAND,
+      keys: ['Alt Shift A'],
+      selector: '.jp-Notebook'
+    });
+    palette?.addItem({ command: DIGITAL_COMMAND, category: 'CASCAQit' });
+    palette?.addItem({ command: ANALOG_COMMAND, category: 'CASCAQit' });
 
     const addToolbarButton = (panel: NotebookPanel): void => {
       panel.toolbar.insertItem(
         10,
         'cascaqitDigitalEditor',
         new ToolbarButton({
-          label: 'CASCAQit',
+          label: 'Digital',
           tooltip: 'Open CASCAQit Digital Editor',
-          onClick: () => void open()
+          onClick: () => void openDigital()
+        })
+      );
+      panel.toolbar.insertItem(
+        11,
+        'cascaqitAnalogEditor',
+        new ToolbarButton({
+          label: 'Analog',
+          tooltip: 'Open CASCAQit Analog Editor',
+          onClick: () => void openAnalog()
         })
       );
     };

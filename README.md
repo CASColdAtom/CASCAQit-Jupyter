@@ -1,6 +1,6 @@
 # CASCAQit Jupyter
 
-CASCAQit-Jupyter is the JupyterLab 4 and Notebook 7 integration for the CASCAQit neutral-atom quantum programming SDK. The current source preview contains an installable Python kernel companion, a visual Digital circuit editor, and safe MIME renderers for public CASCAQit Program, Result, Diagnostics, and Visualization IR objects.
+CASCAQit-Jupyter is the JupyterLab 4 and Notebook 7 integration for the CASCAQit neutral-atom quantum programming SDK. The current source preview contains an installable Python kernel companion, visual Digital and Analog editors, and safe MIME renderers for public CASCAQit Program, Result, Diagnostics, and Visualization IR objects.
 
 Install a released CASCAQit `>=1.0.5a,<1.1` wheel first, then install this source checkout and verify that Jupyter can discover the extension:
 
@@ -27,9 +27,11 @@ display(display_result(result))
 display(display_visualization(build_counts_histogram(result)))
 ```
 
-To build a Digital circuit visually, open a Notebook with a running Python kernel and choose **CASCAQit** in the Notebook toolbar. The same editor is available from the Command Palette as `CASCAQit: Open Digital Editor` and with `Alt+Shift+Q` while the Notebook has focus. Add or rename qubits, compose and reorder gates, set the terminal measurement, then choose **Generate cell**. The editor compiles through the kernel companion and writes deterministic, ordinary CASCAQit Python into a code cell; inspect and run that cell normally.
+To build a Digital circuit visually, open a Notebook with a running Python kernel and choose **Digital** in the Notebook toolbar. The same editor is available from the Command Palette as `CASCAQit: Open Digital Editor` and with `Alt+Shift+Q` while the Notebook has focus. Add or rename qubits, compose and reorder gates, set the terminal measurement, then choose **Generate cell**. The editor compiles through the kernel companion and writes deterministic, ordinary CASCAQit Python into a code cell; inspect and run that cell normally.
 
 The generated cell stores a versioned editor document and exact source hash in Notebook metadata. Saving and reopening the Notebook restores the visual document. If the generated Python has been edited since the last synchronization, **Update cell** enters the explicit `Detached` state and preserves the user source instead of overwriting it. Open [`examples/digital_editor.ipynb`](examples/digital_editor.ipynb) for a small editor-ready Notebook.
+
+To build an Analog program, choose **Analog** in the Notebook toolbar, run `CASCAQit: Open Analog Editor` from the Command Palette, or press `Alt+Shift+A`. Edit atom site IDs, coordinates and occupancy; compose the global Rabi, detuning and phase segments; then enable terminal measurement and choose **Generate cell**. Compilation uses the released `AtomRegister`, `Waveform`, `AHSProgram`, and offline `MockNeutralAtomTarget` public APIs. Validation failures retain their CASCAQit diagnostic code, path and suggestion and mark the matching register, waveform, or measurement control. The generated cell remains ordinary Python and is never executed implicitly. Open [`examples/analog_editor.ipynb`](examples/analog_editor.ipynb) for an editor-ready two-site program.
 
 The renderer currently provides:
 
@@ -41,6 +43,6 @@ The renderer currently provides:
 
 Open [`examples/read_only_renderers.ipynb`](examples/read_only_renderers.ipynb) to inspect every current view with deterministic local data. The renderer creates controlled DOM and SVG elements from versioned JSON payloads; dynamic values are assigned through `textContent`, so HTML or JavaScript carried in a diagnostic is displayed as text rather than executed.
 
-The Digital editor currently supports `H`, `X`, `Y`, `Z`, `RX`, `RY`, `RZ`, `CX`, `CZ`, and `SWAP`; rotation parameters must be numeric and terminal measurement is required before code generation. It does not parse arbitrary Python back into the canvas. The Analog register/waveform editor, OpenQASM import/export, and Job run/cancel controls are not implemented yet. Low-level comm contracts include kernel-epoch, document-revision, timeout, and cooperative-cancel semantics, but only Digital compilation is connected to a user-facing control in this preview.
+The Digital editor currently supports `H`, `X`, `Y`, `Z`, `RX`, `RY`, `RZ`, `CX`, `CZ`, and `SWAP`; rotation parameters must be numeric and terminal measurement is required before code generation. The Analog editor currently supports a two-dimensional global register, vacant sites, piecewise-linear global Rabi/detuning/phase controls, and terminal ground/Rydberg measurement. Its three channels must have equal duration and adjacent segments must be continuous. Neither editor parses arbitrary Python back into the canvas. Local Analog controls, OpenQASM import/export, and user-facing Job run/cancel controls are not implemented. Low-level comm contracts include kernel-epoch, document-revision, timeout, and cooperative-cancel semantics; generated code is run and cancelled through normal Notebook kernel controls in this preview.
 
 The implementation consumes released public CASCAQit APIs only. It does not import `cascaqit._internal`, depend on `cascaqit-compat`, copy simulator code, contact live hardware or CASCAQit Cloud, or depend on CASCAQit-Skills.

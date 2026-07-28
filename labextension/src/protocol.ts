@@ -4,6 +4,7 @@ export type Operation =
   | 'ping'
   | 'validate_document'
   | 'compile_digital'
+  | 'compile_analog'
   | 'cancel';
 
 export interface CommRequest {

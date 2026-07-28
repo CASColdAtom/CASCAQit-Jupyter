@@ -339,8 +339,15 @@ export class DigitalEditorWidget extends Widget {
 
   private async compile(): Promise<void> {
     const panel = this.panel();
-    const kernel = panel?.sessionContext.session?.kernel ?? null;
-    if (panel === null || kernel === null) {
+    if (panel === null) {
+      this.message = 'Open a Notebook with a running Python kernel.';
+      this.diagnostics = [];
+      this.render();
+      return;
+    }
+    await panel.sessionContext.ready;
+    const kernel = panel.sessionContext.session?.kernel ?? null;
+    if (kernel === null) {
       this.message = 'Open a Notebook with a running Python kernel.';
       this.diagnostics = [];
       this.render();

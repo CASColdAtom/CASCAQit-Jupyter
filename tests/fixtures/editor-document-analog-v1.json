@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0",
+  "document_id": "document.analog.two_site",
+  "revision": 0,
+  "program_kind": "analog",
+  "editor_model": {
+    "model_type": "analog",
+    "register": {
+      "coordinate_unit": "um",
+      "sites": [
+        { "id": "s0", "x": 0.0, "y": 0.0, "occupied": true },
+        { "id": "s1", "x": 5.0, "y": 0.0, "occupied": true }
+      ]
+    },
+    "controls": {
+      "rabi": {
+        "segments": [
+          { "id": "r0", "duration": 0.4, "start_value": 0.0, "end_value": 2.5 },
+          { "id": "r1", "duration": 0.4, "start_value": 2.5, "end_value": 2.5 },
+          { "id": "r2", "duration": 0.4, "start_value": 2.5, "end_value": 0.0 }
+        ]
+      },
+      "detuning": {
+        "segments": [
+          { "id": "d0", "duration": 1.2, "start_value": -4.0, "end_value": 4.0 }
+        ]
+      },
+      "phase": {
+        "segments": [
+          { "id": "p0", "duration": 1.2, "start_value": 0.0, "end_value": 0.0 }
+        ]
+      }
+    },
+    "measurement": { "enabled": true }
+  },
+  "generated_source_hash": null,
+  "generated_cell_id": null,
+  "compile_status": "draft",
+  "source_program_hash": null,
+  "metadata": {}
+}

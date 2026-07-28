@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, readFile } from 'node:fs/promises';
 
 const SERVER_URL = 'http://127.0.0.1:8899';
 const NOTEBOOK_PATH = 'examples/read_only_renderers.ipynb';
@@ -11,7 +11,15 @@ test('renders every read-only domain view without overflow or executable markup'
   const route = notebookFrontend
     ? 'tree'
     : `lab/workspaces/cascaqit-renderers-${testInfo.project.name}/tree`;
-  await page.goto(`${SERVER_URL}/${route}/${NOTEBOOK_PATH}`);
+  const notebookPath = `artifacts/renderers-${testInfo.project.name}.ipynb`;
+  const notebook = JSON.parse(await readFile(NOTEBOOK_PATH, 'utf8'));
+  await page.goto(
+    notebookFrontend
+      ? `${SERVER_URL}/tree`
+      : `${SERVER_URL}/lab/workspaces/cascaqit-renderers-${testInfo.project.name}`
+  );
+  await putNotebook(page, notebookPath, notebook);
+  await page.goto(`${SERVER_URL}/${route}/${notebookPath}`);
 
   const renderers = page.locator('.cascaqit-Renderer');
   await expect(renderers).toHaveCount(7);
@@ -163,3 +171,30 @@ test('renders every read-only domain view without overflow or executable markup'
     });
   }
 });
+
+async function putNotebook(
+  page: any,
+  path: string,
+  content: Record<string, unknown>
+): Promise<void> {
+  await page.evaluate(
+    async ({ target, notebook }) => {
+      const xsrf = document.cookie
+        .split('; ')
+        .find(item => item.startsWith('_xsrf='))
+        ?.split('=')[1];
+      const response = await fetch(`/api/contents/${target}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(xsrf === undefined ? {} : { 'X-XSRFToken': decodeURIComponent(xsrf) })
+        },
+        body: JSON.stringify({ type: 'notebook', format: 'json', content: notebook })
+      });
+      if (!response.ok) {
+        throw new Error(`Notebook fixture write failed: ${response.status}`);
+      }
+    },
+    { target: path, notebook: content }
+  );
+}

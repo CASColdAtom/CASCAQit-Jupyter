@@ -59,6 +59,7 @@
                 "ping",
                 "validate_document",
                 "compile_digital",
+                "compile_analog",
                 "cancel"
               ]
             },

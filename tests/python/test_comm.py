@@ -6,7 +6,7 @@ from typing import Any
 
 from cascaqit_jupyter.comm import COMM_TARGET, KernelSession, register_kernel_comm
 from cascaqit_jupyter.schema import validate_contract
-from tests.python.support import digital_document, load_fixture
+from tests.python.support import analog_document, digital_document, load_fixture
 
 
 def request(
@@ -17,12 +17,13 @@ def request(
     operation: str = "ping",
     payload: dict[str, object] | None = None,
     epoch: str | None = None,
+    document_id: str = "document.digital.bell",
 ) -> dict[str, object]:
     return {
         "schema_version": "1.0",
         "message_type": "request",
         "request_id": request_id,
-        "document_id": "document.digital.bell",
+        "document_id": document_id,
         "document_revision": revision,
         "kernel_epoch": session.kernel_epoch if epoch is None else epoch,
         "operation": operation,
@@ -128,6 +129,34 @@ def test_compile_digital_returns_source_program_and_cell_metadata() -> None:
     assert payload["generated_source"].endswith("program = circuit.to_program()\n")
     assert payload["program"]["program_type"] == "digital"
     assert payload["program_hash"] == payload["document"]["source_program_hash"]
+    metadata = payload["cell_metadata"]["cascaqit_jupyter"]
+    assert metadata["editor_document"] == payload["document"]
+
+
+def test_compile_analog_returns_validated_program_and_cell_metadata() -> None:
+    session = KernelSession(kernel_epoch="epoch-1")
+    document = analog_document()
+
+    response = session.handle(
+        request(
+            session,
+            request_id="compile-analog-1",
+            operation="compile_analog",
+            document_id="document.analog.two_site",
+            payload={
+                "document": document,
+                "generated_cell_id": "cell-analog",
+                "current_source": None,
+            },
+        )
+    )
+
+    assert response["status"] == "ok"
+    payload = response["payload"]
+    assert payload["detached"] is False
+    assert payload["program"]["program_type"] == "analog"
+    assert payload["document"]["generated_cell_id"] == "cell-analog"
+    assert "MockNeutralAtomTarget.v0_1" in payload["generated_source"]
     metadata = payload["cell_metadata"]["cascaqit_jupyter"]
     assert metadata["editor_document"] == payload["document"]
 

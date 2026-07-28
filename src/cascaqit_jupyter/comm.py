@@ -9,6 +9,10 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from typing import Any, Literal, Protocol, cast
 
+from cascaqit_jupyter.analog_compile import (
+    AnalogCompileError,
+    compile_analog_document,
+)
 from cascaqit_jupyter.compile import DigitalCompileError, compile_digital_document
 from cascaqit_jupyter.editor_ir import (
     EditorDocumentIR,
@@ -96,6 +100,7 @@ class KernelSession:
                     "ping",
                     "validate_document",
                     "compile_digital",
+                    "compile_analog",
                     "cancel",
                 ],
                 "cooperative_cancel": True,
@@ -187,7 +192,7 @@ class KernelSession:
                     suggestion="Open the document with a compatible companion version.",
                 ),
             )
-        except DigitalCompileError as exc:
+        except (DigitalCompileError, AnalogCompileError) as exc:
             diagnostic = exc.diagnostics[0]
             response = _error_response(
                 context,
@@ -308,6 +313,51 @@ class KernelSession:
                     object_path="$.payload.current_source",
                 )
             return compile_digital_document(
+                document,
+                generated_cell_id=cell_id,
+                current_source=current_source,
+            ).to_payload()
+        if operation == "compile_analog":
+            raw_document = payload.get("document")
+            if not isinstance(raw_document, dict):
+                raise ProtocolFault(
+                    code="EDITOR_DOCUMENT_REQUIRED",
+                    message="compile_analog requires payload.document.",
+                    stage="validation",
+                    object_path="$.payload.document",
+                )
+            document = EditorDocumentIR.from_dict(raw_document)
+            if document.document_id != request["document_id"]:
+                raise ProtocolFault(
+                    code="DOCUMENT_ID_MISMATCH",
+                    message="Envelope and editor document IDs must match.",
+                    stage="validation",
+                    object_path="$.payload.document.document_id",
+                )
+            if document.revision != request["document_revision"]:
+                raise ProtocolFault(
+                    code="DOCUMENT_REVISION_MISMATCH",
+                    message="Envelope and editor document revisions must match.",
+                    stage="validation",
+                    object_path="$.payload.document.revision",
+                )
+            cell_id = payload.get("generated_cell_id")
+            if cell_id is not None and not isinstance(cell_id, str):
+                raise ProtocolFault(
+                    code="GENERATED_CELL_ID_INVALID",
+                    message="generated_cell_id must be a string or null.",
+                    stage="validation",
+                    object_path="$.payload.generated_cell_id",
+                )
+            current_source = payload.get("current_source")
+            if current_source is not None and not isinstance(current_source, str):
+                raise ProtocolFault(
+                    code="CURRENT_SOURCE_INVALID",
+                    message="current_source must be a string or null.",
+                    stage="validation",
+                    object_path="$.payload.current_source",
+                )
+            return compile_analog_document(
                 document,
                 generated_cell_id=cell_id,
                 current_source=current_source,

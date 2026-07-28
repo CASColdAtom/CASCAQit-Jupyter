@@ -23,3 +23,10 @@ def digital_document(*, revision: int = 0) -> dict[str, Any]:
     value = load_fixture("editor-document-digital-v1.json")
     value["revision"] = revision
     return value
+
+
+def analog_document(*, revision: int = 0) -> dict[str, Any]:
+    """Return the canonical Analog editor fixture at a selected revision."""
+    value = load_fixture("editor-document-analog-v1.json")
+    value["revision"] = revision
+    return value

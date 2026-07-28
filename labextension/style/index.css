@@ -275,6 +275,128 @@
   font-weight: 650;
 }
 
+.cascaqit-AnalogEditor-sites,
+.cascaqit-AnalogEditor-segments {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.cascaqit-AnalogEditor-site,
+.cascaqit-AnalogEditor-segment {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 7px;
+  padding: 8px;
+  border: 1px solid var(--jp-border-color2, #c9cdd3);
+  border-radius: 4px;
+}
+
+.cascaqit-AnalogEditor-site.has-diagnostic,
+.cascaqit-AnalogEditor-segment.has-diagnostic,
+.cascaqit-Editor-section.has-diagnostic {
+  border-color: #9a5b00;
+  border-style: dashed;
+}
+
+.cascaqit-AnalogEditor-siteId,
+.cascaqit-AnalogEditor-coordinates,
+.cascaqit-AnalogEditor-segmentValues {
+  min-width: 0;
+  grid-column: 1 / -1;
+}
+
+.cascaqit-AnalogEditor-coordinates,
+.cascaqit-AnalogEditor-segmentValues {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.cascaqit-AnalogEditor-segmentValues {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.cascaqit-AnalogEditor-coordinates label,
+.cascaqit-AnalogEditor-segmentValues label {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+  color: var(--jp-ui-font-color2, #50555c);
+  font-size: 10px;
+  line-height: 14px;
+}
+
+.cascaqit-AnalogEditor-coordinates input,
+.cascaqit-AnalogEditor-segmentValues input {
+  width: 100%;
+  min-width: 0;
+}
+
+.cascaqit-AnalogEditor-check {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  line-height: 18px;
+}
+
+.cascaqit-AnalogEditor-check input[type='checkbox'] {
+  min-height: 14px;
+  flex: 0 0 auto;
+}
+
+.cascaqit-AnalogEditor-segmentHeading {
+  display: contents;
+}
+
+.cascaqit-AnalogEditor-inlineDiagnostics {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding-left: 18px;
+  color: #7a4700;
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.cascaqit-AnalogEditor-siteOccupied {
+  fill: #00796b;
+  stroke: #004d40;
+  stroke-width: 2;
+}
+
+.cascaqit-AnalogEditor-siteVacant {
+  fill: var(--jp-layout-color1, #fff);
+  stroke: #7b818a;
+  stroke-width: 2;
+  stroke-dasharray: 4 3;
+}
+
+.cascaqit-AnalogEditor-axis {
+  stroke: #9aa0a8;
+  stroke-width: 1;
+}
+
+.cascaqit-AnalogEditor-wave {
+  fill: none;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.cascaqit-AnalogEditor-wave.is-rabi {
+  stroke: #255bb8;
+}
+
+.cascaqit-AnalogEditor-wave.is-detuning {
+  stroke: #a65300;
+}
+
+.cascaqit-AnalogEditor-wave.is-phase {
+  stroke: #00796b;
+}
+
 @media (max-width: 520px) {
   .cascaqit-Editor-gateForm {
     grid-template-columns: minmax(0, 1fr);

@@ -2,6 +2,10 @@ import type { ICellModel } from '@jupyterlab/cells';
 import { NotebookActions, NotebookPanel } from '@jupyterlab/notebook';
 
 import {
+  AnalogEditorDocument,
+  restoreAnalogDocument
+} from './analog_document';
+import {
   DigitalEditorDocument,
   restoreDigitalDocument
 } from './digital_document';
@@ -11,6 +15,11 @@ export const CELL_METADATA_KEY = 'cascaqit_jupyter';
 export interface GeneratedCellContext {
   cellId: string | null;
   source: string | null;
+}
+
+export interface EditorDocumentIdentity {
+  document_id: string;
+  generated_cell_id: string | null;
 }
 
 export interface CompilePayload {
@@ -33,9 +42,20 @@ export class NotebookBridge {
     return null;
   }
 
+  restoreAnalog(panel: NotebookPanel): AnalogEditorDocument | null {
+    for (const cell of this.models(panel)) {
+      const metadata = cell.getMetadata(CELL_METADATA_KEY);
+      const restored = analogEditorDocumentFromMetadata(metadata);
+      if (restored !== null) {
+        return restored;
+      }
+    }
+    return null;
+  }
+
   context(
     panel: NotebookPanel,
-    document: DigitalEditorDocument
+    document: EditorDocumentIdentity
   ): GeneratedCellContext {
     const cell = this.findCell(panel, document);
     return cell === null
@@ -58,7 +78,7 @@ export class NotebookBridge {
 
   apply(
     panel: NotebookPanel,
-    document: DigitalEditorDocument,
+    document: EditorDocumentIdentity,
     payload: CompilePayload
   ): void {
     if (payload.detached === true) {
@@ -81,7 +101,7 @@ export class NotebookBridge {
 
   private findCell(
     panel: NotebookPanel,
-    document: DigitalEditorDocument
+    document: EditorDocumentIdentity
   ): ICellModel | null {
     const cells = this.models(panel);
     if (document.generated_cell_id !== null) {
@@ -114,6 +134,15 @@ export function editorDocumentFromMetadata(
     return null;
   }
   return restoreDigitalDocument(value.editor_document);
+}
+
+export function analogEditorDocumentFromMetadata(
+  value: unknown
+): AnalogEditorDocument | null {
+  if (!isRecord(value) || value.schema_version !== '1.0') {
+    return null;
+  }
+  return restoreAnalogDocument(value.editor_document);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
