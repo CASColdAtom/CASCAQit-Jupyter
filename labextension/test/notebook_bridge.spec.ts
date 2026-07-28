@@ -109,4 +109,38 @@ describe('generated cell metadata', () => {
     expect(analogEditorDocumentFromMetadata(metadata)).toEqual(document);
     expect(editorDocumentFromMetadata(metadata)).toBeNull();
   });
+
+  it('updates Job metadata without changing generated source', () => {
+    const document = {
+      ...createDigitalDocument(() => 'document.digital.job'),
+      generated_cell_id: 'cell-job',
+      compile_status: 'completed' as const
+    };
+    const setSource = vi.fn();
+    const setMetadata = vi.fn();
+    const cell = {
+      id: 'cell-job',
+      sharedModel: {
+        getSource: vi.fn(() => 'preserved source'),
+        setSource
+      },
+      getMetadata: vi.fn(),
+      setMetadata
+    };
+    const panel = {
+      model: { cells: [cell] }
+    } as unknown as NotebookPanel;
+    const metadata = {
+      schema_version: '1.0',
+      document_id: document.document_id,
+      editor_document: document
+    };
+
+    new NotebookBridge().applyMetadata(panel, document, {
+      cell_metadata: { [CELL_METADATA_KEY]: metadata }
+    });
+
+    expect(setSource).not.toHaveBeenCalled();
+    expect(setMetadata).toHaveBeenCalledWith(CELL_METADATA_KEY, metadata);
+  });
 });

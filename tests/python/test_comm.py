@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import threading
+import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
+
+import pytest
 
 from cascaqit_jupyter.comm import COMM_TARGET, KernelSession, register_kernel_comm
 from cascaqit_jupyter.schema import validate_contract
@@ -212,6 +216,144 @@ def test_compile_digital_returns_element_scoped_validation_fault() -> None:
     assert response["error"]["details"]["diagnostics"][0]["suggestion"]
 
 
+def test_start_job_and_job_status_return_local_result() -> None:
+    session = KernelSession(kernel_epoch="epoch-1")
+    compiled = session.handle(
+        request(
+            session,
+            request_id="compile-1",
+            operation="compile_digital",
+            payload={
+                "document": digital_document(),
+                "generated_cell_id": "cell-bell",
+                "current_source": None,
+            },
+        )
+    )["payload"]
+
+    started = session.handle(
+        request(
+            session,
+            request_id="start-job-1",
+            operation="start_job",
+            payload={
+                "document": compiled["document"],
+                "generated_cell_id": "cell-bell",
+                "current_source": compiled["generated_source"],
+                "shots": 32,
+                "seed": 2026,
+            },
+        )
+    )
+
+    assert started["status"] == "ok"
+    job_id = started["payload"]["job"]["job_id"]
+    deadline = time.monotonic() + 10
+    while True:
+        status = session.handle(
+            request(
+                session,
+                request_id=f"job-status-{time.monotonic_ns()}",
+                operation="job_status",
+                payload={"job_id": job_id},
+            )
+        )
+        assert status["status"] == "ok"
+        if status["payload"]["job"]["state"] == "completed":
+            break
+        if time.monotonic() >= deadline:
+            raise AssertionError(f"Job did not complete: {job_id}")
+        time.sleep(0.01)
+
+    payload = status["payload"]
+    assert payload["result_mime"]["kind"] == "result"
+    assert payload["result_mime"]["data"]["shots"] == 32
+    assert payload["job"]["result"]["result_id"] == (
+        payload["result_mime"]["data"]["result_id"]
+    )
+    saved_document = payload["cell_metadata"]["cascaqit_jupyter"][
+        "editor_document"
+    ]
+    assert saved_document["metadata"]["last_job"]["job_id"] == job_id
+
+
+def test_cancel_job_routes_to_job_registry(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    workers: list[DeferredThread] = []
+
+    def thread_factory(
+        *,
+        target: Callable[..., None],
+        args: tuple[object, ...],
+        name: str,
+        daemon: bool,
+    ) -> DeferredThread:
+        worker = DeferredThread(target=target, args=args, name=name, daemon=daemon)
+        workers.append(worker)
+        return worker
+
+    monkeypatch.setattr(threading, "Thread", thread_factory)
+    session = KernelSession(kernel_epoch="epoch-1")
+    compiled = session.handle(
+        request(
+            session,
+            request_id="compile-1",
+            operation="compile_digital",
+            payload={
+                "document": digital_document(),
+                "generated_cell_id": "cell-bell",
+                "current_source": None,
+            },
+        )
+    )["payload"]
+    started = session.handle(
+        request(
+            session,
+            request_id="start-job-1",
+            operation="start_job",
+            payload={
+                "document": compiled["document"],
+                "generated_cell_id": "cell-bell",
+                "current_source": compiled["generated_source"],
+            },
+        )
+    )
+
+    cancelled = session.handle(
+        request(
+            session,
+            request_id="cancel-job-1",
+            operation="cancel_job",
+            payload={"job_id": started["payload"]["job"]["job_id"]},
+        )
+    )
+
+    assert workers and workers[0].started is True
+    assert cancelled["status"] == "ok"
+    assert cancelled["payload"]["job"]["cancel_requested"] is True
+    assert cancelled["payload"]["job"]["state"] == "cancelled"
+
+
+def test_job_status_requires_a_job_from_the_current_kernel_epoch() -> None:
+    session = KernelSession(kernel_epoch="epoch-1")
+
+    response = session.handle(
+        request(
+            session,
+            request_id="job-status-missing",
+            operation="job_status",
+            payload={"job_id": "jupyter_job.digital.missing"},
+        )
+    )
+
+    assert response["status"] == "error"
+    assert response["error"]["code"] == "JOB_NOT_FOUND"
+    assert response["error"]["details"]["diagnostics"][0]["object_path"] == (
+        "job_id"
+    )
+
+
 def test_cancel_is_cooperative_and_requires_a_running_target() -> None:
     session = KernelSession(kernel_epoch="epoch-1")
     calls: list[str] = []
@@ -259,6 +401,25 @@ class FakeComm:
 
     def send(self, data: dict[str, Any]) -> None:
         self.sent.append(data)
+
+
+class DeferredThread:
+    def __init__(
+        self,
+        *,
+        target: Callable[..., None],
+        args: tuple[object, ...],
+        name: str,
+        daemon: bool,
+    ) -> None:
+        self.target = target
+        self.args = args
+        self.name = name
+        self.daemon = daemon
+        self.started = False
+
+    def start(self) -> None:
+        self.started = True
 
 
 @dataclass

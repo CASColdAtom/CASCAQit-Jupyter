@@ -15,6 +15,8 @@ import {
   withCompileResult
 } from './digital_document';
 import { KernelClient } from './kernel_client';
+import { JobController } from './job_controller';
+import { renderJobView } from './job_view';
 import { CompilePayload, NotebookBridge } from './notebook_bridge';
 import type { CommResponse, ProtocolError } from './protocol';
 
@@ -36,6 +38,20 @@ export class DigitalEditorWidget extends Widget {
     this.client = options.client ?? new KernelClient();
     this.documentId = options.documentId;
     this.document = createDigitalDocument(this.documentId);
+    this.job = new JobController({
+      panel: this.panel,
+      document: () => this.document,
+      acceptDocument: value => {
+        this.document = withCompileResult(value, this.document);
+      },
+      changed: () => {
+        if (!this.isDisposed) {
+          this.render();
+        }
+      },
+      bridge: this.bridge,
+      client: this.client
+    });
     this.id = 'cascaqit-digital-editor';
     this.title.label = 'CASCAQit Digital Editor';
     this.title.closable = true;
@@ -55,6 +71,7 @@ export class DigitalEditorWidget extends Widget {
     }
     const restored = this.bridge.restore(panel);
     this.document = restored ?? createDigitalDocument(this.documentId);
+    this.job.restore(this.document);
     this.message = restored === null
       ? 'Draft circuit'
       : 'Restored from generated cell metadata';
@@ -68,6 +85,7 @@ export class DigitalEditorWidget extends Widget {
   dispose(): void {
     if (!this.isDisposed) {
       this.panelBinding += 1;
+      this.job.dispose();
       this.client.disconnect('CASCAQit Digital editor closed.');
     }
     super.dispose();
@@ -84,11 +102,23 @@ export class DigitalEditorWidget extends Widget {
       this.renderGateSequence(),
       this.renderMeasurement(),
       this.renderPreview(),
+      this.renderJob(),
       this.renderDiagnostics(),
       this.renderActions()
     );
     fragment.append(body);
     this.node.replaceChildren(fragment);
+    if (this.busy || this.job.active) {
+      this.node
+        .querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLButtonElement>(
+          'input, select, button'
+        )
+        .forEach(control => {
+          if (control.dataset.testid !== 'cancel-job') {
+            control.disabled = true;
+          }
+        });
+    }
   }
 
   private renderHeader(): HTMLElement {
@@ -317,6 +347,27 @@ export class DigitalEditorWidget extends Widget {
     return region;
   }
 
+  private renderJob(): HTMLElement {
+    const runnable =
+      this.document.generated_cell_id !== null &&
+      !['draft', 'invalid', 'detached'].includes(this.document.compile_status);
+    return renderJobView({
+      state: this.job.view,
+      active: this.job.active,
+      canRun: runnable && !this.busy,
+      shots: this.shots,
+      seed: this.seed,
+      onShots: value => {
+        this.shots = value;
+      },
+      onSeed: value => {
+        this.seed = value;
+      },
+      onRun: () => void this.job.start({ shots: this.shots, seed: this.seed }),
+      onCancel: () => void this.job.cancel()
+    });
+  }
+
   private renderActions(): HTMLElement {
     const actions = element('footer', 'cascaqit-Editor-actions');
     const generate = commandButton(
@@ -324,7 +375,7 @@ export class DigitalEditorWidget extends Widget {
       'Generate or update CASCAQit code cell'
     );
     generate.dataset.testid = 'generate-cell';
-    generate.disabled = this.busy;
+    generate.disabled = this.busy || this.job.active;
     generate.addEventListener('click', () => void this.compile());
     actions.append(generate);
     return actions;
@@ -424,10 +475,13 @@ export class DigitalEditorWidget extends Widget {
   private readonly panel: () => NotebookPanel | null;
   private readonly bridge: NotebookBridge;
   private readonly client: KernelClient;
+  private readonly job: JobController;
   private readonly documentId?: () => string;
   private message = 'Draft circuit';
   private diagnostics: string[] = [];
   private busy = false;
+  private shots = 100;
+  private seed = 2026;
   private panelBinding = 0;
 }
 

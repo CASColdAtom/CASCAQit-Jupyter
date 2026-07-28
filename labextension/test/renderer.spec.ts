@@ -136,10 +136,33 @@ describe('CASCAQit renderer', () => {
       RESULT_MIME,
       payload('result', {
         schema_version: '0.1',
+        result_id: 'result.local.bell',
+        program_hash: HASH,
         shots: 16,
         target_id: 'local.digital_simulator',
         counts: { '00': 6, '11': 10 },
+        probabilities: { '00': 0.375, '11': 0.625 },
+        observables: { pauli_z: { 'z:q0': 0, 'z:q1': 0 } },
         bit_ordering: { convention: 'digital_qubit_order', qubits: 'q0,q1' },
+        metadata: {
+          seed: 2026,
+          backend_id: 'local.simulator',
+          network_accessed: false,
+          offline_deterministic: true,
+          execution_package_created: false,
+          simulation_resource_estimate: {
+            method: 'state_vector',
+            logical_sites: 2,
+            hilbert_dimension: 4,
+            estimated_peak_bytes: 8576
+          },
+          simulation_resource_usage: {
+            actual_peak_rss_bytes: 1048576,
+            incremental_peak_rss_bytes: 4096,
+            wall_time_seconds: 0.0123,
+            measurement_scope: 'job'
+          }
+        },
         diagnostics: []
       })
     );
@@ -149,6 +172,16 @@ describe('CASCAQit renderer', () => {
     expect(bars.every(bar => Number(bar.getAttribute('height')) > 0)).toBe(true);
     expect(node.textContent).toContain('digital_qubit_order | q0,q1');
     expect(node.textContent).toContain('16 shots');
+    expect(node.textContent).toContain('result.local.bell');
+    expect(node.textContent).toContain('Probabilities');
+    expect(node.textContent).toContain('62.5%');
+    expect(node.textContent).toContain('Observables');
+    expect(node.textContent).toContain('pauli_z / z:q0');
+    expect(node.textContent).toContain('Execution boundary');
+    expect(node.textContent).toContain('Offline deterministic');
+    expect(node.textContent).toContain('Simulation resources');
+    expect(node.textContent).toContain('8.38 KiB');
+    expect(node.textContent).toContain('1.00 MiB');
   });
 
   it('renders Visualization IR by visualization kind', () => {

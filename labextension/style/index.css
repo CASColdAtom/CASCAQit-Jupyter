@@ -275,6 +275,81 @@
   font-weight: 650;
 }
 
+.cascaqit-Job-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 8px;
+}
+
+.cascaqit-Job-options label {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+  color: var(--jp-ui-font-color2, #50555c);
+  font-size: 10px;
+  line-height: 14px;
+}
+
+.cascaqit-Job-options input {
+  width: 100%;
+  min-width: 0;
+}
+
+.cascaqit-Job-status {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 3px 10px;
+  margin-top: 10px;
+  font-size: 12px;
+  line-height: 17px;
+}
+
+.cascaqit-Job-status span {
+  color: var(--jp-ui-font-color2, #5f6368);
+}
+
+.cascaqit-Job-status code {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  color: var(--jp-ui-font-color2, #5f6368);
+  font-family: var(--jp-code-font-family, monospace);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cascaqit-Job-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.cascaqit-Job-actions button[data-testid='run-job'] {
+  border-color: #00796b;
+  background: #00796b;
+  color: #fff;
+  font-weight: 650;
+}
+
+.cascaqit-Job-actions button[data-testid='cancel-job'] {
+  border-color: #9a5b13;
+}
+
+.cascaqit-Job-result {
+  margin: 12px -12px -12px;
+  border-top: 1px solid var(--jp-border-color2, #c9cdd3);
+}
+
+.cascaqit-Job-result .cascaqit-Renderer {
+  min-width: 0;
+}
+
+.cascaqit-Job-result .cascaqit-Renderer-sectionHeading {
+  padding-right: 2px;
+}
+
 .cascaqit-AnalogEditor-sites,
 .cascaqit-AnalogEditor-segments {
   display: grid;
@@ -513,6 +588,7 @@
 
 .cascaqit-Renderer-sectionHeading {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
@@ -520,17 +596,45 @@
 }
 
 .cascaqit-Renderer-sectionHeading h4 {
+  min-width: 0;
   margin: 0;
+  overflow-wrap: anywhere;
   font-size: 13px;
   font-weight: 650;
   line-height: 18px;
 }
 
 .cascaqit-Renderer-sectionHeading span {
+  min-width: 0;
+  max-width: 100%;
   color: var(--jp-ui-font-color2, #5f6368);
+  overflow-wrap: anywhere;
   font-size: 11px;
   line-height: 16px;
   text-align: right;
+}
+
+.cascaqit-Renderer-dataTable {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 12px;
+  line-height: 17px;
+}
+
+.cascaqit-Renderer-dataTable th,
+.cascaqit-Renderer-dataTable td {
+  padding: 5px 8px;
+  border-top: 1px solid var(--jp-border-color2, #c9cdd3);
+  overflow-wrap: anywhere;
+  text-align: left;
+  vertical-align: top;
+}
+
+.cascaqit-Renderer-dataTable th {
+  width: min(38%, 220px);
+  color: var(--jp-ui-font-color2, #5f6368);
+  font-weight: 500;
 }
 
 .cascaqit-Renderer-domainGrid {

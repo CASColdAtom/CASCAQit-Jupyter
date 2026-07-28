@@ -8,15 +8,16 @@ test('renders every read-only domain view without overflow or executable markup'
   page
 }, testInfo) => {
   const notebookFrontend = testInfo.project.name.startsWith('notebook');
+  const workspace = `cascaqit-renderers-${testInfo.project.name}-${process.pid}`;
   const route = notebookFrontend
     ? 'tree'
-    : `lab/workspaces/cascaqit-renderers-${testInfo.project.name}/tree`;
+    : `lab/workspaces/${workspace}/tree`;
   const notebookPath = `artifacts/renderers-${testInfo.project.name}.ipynb`;
   const notebook = JSON.parse(await readFile(NOTEBOOK_PATH, 'utf8'));
   await page.goto(
     notebookFrontend
       ? `${SERVER_URL}/tree`
-      : `${SERVER_URL}/lab/workspaces/cascaqit-renderers-${testInfo.project.name}`
+      : `${SERVER_URL}/lab/workspaces/${workspace}`
   );
   await putNotebook(page, notebookPath, notebook);
   await page.goto(`${SERVER_URL}/${route}/${notebookPath}`);
@@ -165,7 +166,7 @@ test('renders every read-only domain view without overflow or executable markup'
   await mkdir('artifacts/screenshots', { recursive: true });
   for (let index = 0; index < (await renderers.count()); index += 1) {
     const renderer = renderers.nth(index);
-    await renderer.scrollIntoViewIfNeeded();
+    await renderer.evaluate(node => node.scrollIntoView({ block: 'center' }));
     await page.screenshot({
       path: `artifacts/screenshots/${testInfo.project.name}-viewport-${index + 1}.png`
     });

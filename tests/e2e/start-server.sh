@@ -3,11 +3,12 @@ set -eu
 
 repository_root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd "$repository_root"
-PATH="$repository_root/.venv/bin:$PATH"
+runtime_venv=${CASCAQIT_JUPYTER_VENV:-"$repository_root/.venv"}
+PATH="$runtime_venv/bin:$PATH"
 export PATH
 
-.venv/bin/jupyter trust examples/read_only_renderers.ipynb
-exec .venv/bin/jupyter lab \
+"$runtime_venv/bin/jupyter" trust examples/read_only_renderers.ipynb
+exec "$runtime_venv/bin/jupyter" lab \
   --no-browser \
   --ServerApp.root_dir=. \
   --IdentityProvider.token='' \

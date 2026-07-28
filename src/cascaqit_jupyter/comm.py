@@ -18,6 +18,7 @@ from cascaqit_jupyter.editor_ir import (
     EditorDocumentIR,
     UnsupportedEditorSchemaVersion,
 )
+from cascaqit_jupyter.jobs import JobOperationError, KernelJobManager
 from cascaqit_jupyter.schema import SchemaContractError, validate_contract
 
 COMM_TARGET = "cascaqit.jupyter.v1"
@@ -78,6 +79,7 @@ class KernelSession:
     """Own one kernel epoch and reject stale or duplicate document requests."""
 
     kernel_epoch: str = field(default_factory=lambda: uuid.uuid4().hex)
+    jobs: KernelJobManager = field(default_factory=KernelJobManager)
     _latest_revisions: dict[str, int] = field(default_factory=dict, init=False)
     _seen_request_ids: set[str] = field(default_factory=set, init=False)
     _cancel_callbacks: dict[str, Callable[[], None]] = field(
@@ -101,6 +103,9 @@ class KernelSession:
                     "validate_document",
                     "compile_digital",
                     "compile_analog",
+                    "start_job",
+                    "job_status",
+                    "cancel_job",
                     "cancel",
                 ],
                 "cooperative_cancel": True,
@@ -131,6 +136,7 @@ class KernelSession:
         self._latest_revisions.clear()
         self._seen_request_ids.clear()
         self._cancel_callbacks.clear()
+        self.jobs.clear()
         return self.kernel_epoch
 
     def handle(self, raw_request: object) -> dict[str, Any]:
@@ -192,7 +198,7 @@ class KernelSession:
                     suggestion="Open the document with a compatible companion version.",
                 ),
             )
-        except (DigitalCompileError, AnalogCompileError) as exc:
+        except (DigitalCompileError, AnalogCompileError, JobOperationError) as exc:
             diagnostic = exc.diagnostics[0]
             response = _error_response(
                 context,
@@ -362,6 +368,62 @@ class KernelSession:
                 generated_cell_id=cell_id,
                 current_source=current_source,
             ).to_payload()
+        if operation == "start_job":
+            raw_document = payload.get("document")
+            if not isinstance(raw_document, dict):
+                raise ProtocolFault(
+                    code="EDITOR_DOCUMENT_REQUIRED",
+                    message="start_job requires payload.document.",
+                    stage="validation",
+                    object_path="$.payload.document",
+                )
+            document = EditorDocumentIR.from_dict(raw_document)
+            if document.document_id != request["document_id"]:
+                raise ProtocolFault(
+                    code="DOCUMENT_ID_MISMATCH",
+                    message="Envelope and editor document IDs must match.",
+                    stage="validation",
+                    object_path="$.payload.document.document_id",
+                )
+            if document.revision != request["document_revision"]:
+                raise ProtocolFault(
+                    code="DOCUMENT_REVISION_MISMATCH",
+                    message="Envelope and editor document revisions must match.",
+                    stage="validation",
+                    object_path="$.payload.document.revision",
+                )
+            cell_id = payload.get("generated_cell_id")
+            if cell_id is not None and not isinstance(cell_id, str):
+                raise ProtocolFault(
+                    code="GENERATED_CELL_ID_INVALID",
+                    message="generated_cell_id must be a string or null.",
+                    stage="validation",
+                    object_path="$.payload.generated_cell_id",
+                )
+            current_source = payload.get("current_source")
+            if current_source is not None and not isinstance(current_source, str):
+                raise ProtocolFault(
+                    code="CURRENT_SOURCE_INVALID",
+                    message="current_source must be a string or null.",
+                    stage="validation",
+                    object_path="$.payload.current_source",
+                )
+            return self.jobs.start(
+                document,
+                generated_cell_id=cell_id,
+                current_source=current_source,
+                shots=_job_integer(payload, "shots", default=100),
+                seed=_job_integer(payload, "seed", default=2026),
+                analog_time_steps=_job_integer(
+                    payload,
+                    "analog_time_steps",
+                    default=80,
+                ),
+            )
+        if operation == "job_status":
+            return self.jobs.status(_job_id(payload, operation="job_status"))
+        if operation == "cancel_job":
+            return self.jobs.cancel(_job_id(payload, operation="cancel_job"))
         if operation == "cancel":
             target_request_id = payload.get("target_request_id")
             if not isinstance(target_request_id, str) or not target_request_id:
@@ -390,6 +452,30 @@ class KernelSession:
             message=f"Unsupported operation: {operation}",
             object_path="$.operation",
         )
+
+
+def _job_id(payload: dict[str, Any], *, operation: str) -> str:
+    value = payload.get("job_id")
+    if not isinstance(value, str) or not value.strip():
+        raise ProtocolFault(
+            code="JOB_ID_REQUIRED",
+            message=f"{operation} requires a non-empty payload.job_id.",
+            stage="validation",
+            object_path="$.payload.job_id",
+        )
+    return value
+
+
+def _job_integer(payload: dict[str, Any], name: str, *, default: int) -> int:
+    value = payload.get(name, default)
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise ProtocolFault(
+            code="JOB_OPTION_INVALID",
+            message=f"{name} must be an integer.",
+            stage="validation",
+            object_path=f"$.payload.{name}",
+        )
+    return value
 
 
 def register_kernel_comm(

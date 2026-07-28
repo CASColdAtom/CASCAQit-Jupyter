@@ -30,6 +30,10 @@ export interface CompilePayload {
   diagnostics: unknown;
 }
 
+export interface JobMetadataPayload {
+  cell_metadata: unknown;
+}
+
 export class NotebookBridge {
   restore(panel: NotebookPanel): DigitalEditorDocument | null {
     for (const cell of this.models(panel)) {
@@ -92,6 +96,21 @@ export class NotebookBridge {
       throw new Error('Generated cell association was lost before synchronization.');
     }
     cell.sharedModel.setSource(payload.generated_source);
+    this.applyMetadata(panel, document, payload);
+  }
+
+  applyMetadata(
+    panel: NotebookPanel,
+    document: EditorDocumentIdentity,
+    payload: JobMetadataPayload
+  ): void {
+    if (!isRecord(payload.cell_metadata)) {
+      throw new Error('Kernel returned invalid generated cell metadata.');
+    }
+    const cell = this.findCell(panel, document);
+    if (cell === null) {
+      throw new Error('Generated cell association was lost before metadata update.');
+    }
     const metadata = payload.cell_metadata[CELL_METADATA_KEY];
     if (!isRecord(metadata)) {
       throw new Error('Kernel returned invalid generated cell metadata.');

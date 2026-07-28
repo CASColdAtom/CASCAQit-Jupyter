@@ -38,6 +38,26 @@ test('creates, restores, and detaches a Digital generated cell', async ({
   await editor.getByTestId('generate-cell').click();
   await expect(editor.getByTestId('editor-status')).toHaveText('Ready');
   await expect(editor).toContainText('generated code cell synchronized');
+
+  await editor.getByLabel('Shots').fill('32');
+  await editor.getByLabel('Seed').fill('2026');
+  await editor.getByTestId('run-job').click();
+  await expect(editor.getByTestId('job-status')).toContainText('Completed');
+  await expect(editor.getByTestId('editor-status')).toHaveText('Completed');
+  const result = editor.getByTestId('job-result');
+  await expect(result).toBeVisible();
+  await expect(result).toContainText('Probabilities');
+  await expect(result).toContainText('Observables');
+  await expect(result).toContainText('Simulation resources');
+  await expect(result).toContainText('Offline deterministic');
+  await expect(result).toContainText('2026');
+  expect(await embeddedResultFits(result)).toBe(true);
+  await result.evaluate(node => node.scrollIntoView({ block: 'center' }));
+  await mkdir('artifacts/screenshots', { recursive: true });
+  await editor.screenshot({
+    path: `artifacts/screenshots/${testInfo.project.name}-digital-job.png`
+  });
+
   await page.locator('.jp-Notebook:visible').focus();
   await page.keyboard.press('Meta+S');
   let savedNotebook: any;
@@ -52,7 +72,7 @@ test('creates, restores, and detaches a Digital generated cell', async ({
     }
     return savedNotebook.cells.some(
       (cell: any) =>
-        cell.metadata?.cascaqit_jupyter?.editor_document?.compile_status === 'ready'
+        cell.metadata?.cascaqit_jupyter?.editor_document?.compile_status === 'completed'
     );
   }).toBe(true);
   const savedCell = savedNotebook.cells.find(
@@ -63,12 +83,19 @@ test('creates, restores, and detaches a Digital generated cell', async ({
     : savedCell.source;
   expect(savedSource).toContain('circuit.h("q0")');
   expect(savedSource).toContain('circuit.cx("q0", "q1")');
+  expect(savedCell.metadata.cascaqit_jupyter.editor_document.metadata.last_job)
+    .toMatchObject({ state: 'completed', seed: 2026, shots: 32 });
+  expect(
+    savedCell.metadata.cascaqit_jupyter.editor_document.metadata.last_job.result.result_id
+  ).toMatch(/^result\./);
 
   await page.reload();
   await expect(page.locator('.jp-Notebook:visible')).toBeVisible();
   await openEditor(page);
-  await expect(editor.getByTestId('editor-status')).toHaveText('Ready');
+  await expect(editor.getByTestId('editor-status')).toHaveText('Completed');
   await expect(editor).toContainText('Restored from generated cell metadata');
+  await expect(editor.getByTestId('job-status')).toContainText('Completed');
+  await expect(editor.getByTestId('job-status')).toContainText('jupyter_job.digital.');
   await expect(editor.getByTestId('generate-cell')).toHaveText('Update cell');
 
   const code = page
@@ -163,7 +190,6 @@ test('creates, restores, and detaches a Digital generated cell', async ({
     });
   expect(visiblePixels).toBeGreaterThan(100);
 
-  await mkdir('artifacts/screenshots', { recursive: true });
   await editor.screenshot({
     path: `artifacts/screenshots/${testInfo.project.name}-digital-editor.png`
   });
@@ -176,6 +202,21 @@ async function openEditor(page: any): Promise<void> {
     await page.keyboard.press('Alt+Shift+Q');
     await expect(page.locator('.cascaqit-Editor')).toBeVisible({ timeout: 1000 });
   }).toPass({ timeout: 20_000, intervals: [500] });
+}
+
+async function embeddedResultFits(result: any): Promise<boolean> {
+  return result.evaluate((node: HTMLElement) => {
+    const bounds = node.getBoundingClientRect();
+    return Array.from(node.querySelectorAll(
+      '.cascaqit-Renderer, .cascaqit-Renderer-sectionHeading, .cascaqit-Renderer-sectionHeading > *'
+    ))
+      .every(item => {
+        const rect = item.getBoundingClientRect();
+        return rect.left >= bounds.left - 1 &&
+          rect.right <= bounds.right + 1 &&
+          item.scrollWidth <= item.clientWidth + 1;
+      });
+  });
 }
 
 async function putNotebook(

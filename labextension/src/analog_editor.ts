@@ -17,6 +17,8 @@ import {
   withAnalogCompileResult
 } from './analog_document';
 import { KernelClient } from './kernel_client';
+import { JobController } from './job_controller';
+import { renderJobView } from './job_view';
 import { CompilePayload, NotebookBridge } from './notebook_bridge';
 import type { CommResponse, ProtocolError } from './protocol';
 
@@ -44,6 +46,20 @@ export class AnalogEditorWidget extends Widget {
     this.client = options.client ?? new KernelClient();
     this.documentId = options.documentId;
     this.document = createAnalogDocument(this.documentId);
+    this.job = new JobController({
+      panel: this.panel,
+      document: () => this.document,
+      acceptDocument: value => {
+        this.document = withAnalogCompileResult(value, this.document);
+      },
+      changed: () => {
+        if (!this.isDisposed) {
+          this.render();
+        }
+      },
+      bridge: this.bridge,
+      client: this.client
+    });
     this.id = 'cascaqit-analog-editor';
     this.title.label = 'CASCAQit Analog Editor';
     this.title.closable = true;
@@ -64,6 +80,7 @@ export class AnalogEditorWidget extends Widget {
     }
     const restored = this.bridge.restoreAnalog(panel);
     this.document = restored ?? createAnalogDocument(this.documentId);
+    this.job.restore(this.document);
     this.message = restored === null
       ? 'Draft Analog program'
       : 'Restored from generated cell metadata';
@@ -78,6 +95,7 @@ export class AnalogEditorWidget extends Widget {
   dispose(): void {
     if (!this.isDisposed) {
       this.panelBinding += 1;
+      this.job.dispose();
       this.client.disconnect('CASCAQit Analog editor closed.');
     }
     super.dispose();
@@ -93,18 +111,21 @@ export class AnalogEditorWidget extends Widget {
       this.renderMeasurement(),
       this.renderRegisterPreview(),
       this.renderWaveformPreview(),
+      this.renderJob(),
       this.renderDiagnostics(),
       this.renderActions()
     );
     fragment.append(body);
     this.node.replaceChildren(fragment);
-    if (this.busy) {
+    if (this.busy || this.job.active) {
       this.node
         .querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLButtonElement>(
           'input, select, button'
         )
         .forEach(control => {
-          control.disabled = true;
+          if (control.dataset.testid !== 'cancel-job') {
+            control.disabled = true;
+          }
         });
     }
   }
@@ -349,10 +370,39 @@ export class AnalogEditorWidget extends Widget {
       'Generate or update CASCAQit Analog code cell'
     );
     generate.dataset.testid = 'generate-analog-cell';
-    generate.disabled = this.busy;
+    generate.disabled = this.busy || this.job.active;
     generate.addEventListener('click', () => void this.compile());
     actions.append(generate);
     return actions;
+  }
+
+  private renderJob(): HTMLElement {
+    const runnable =
+      this.document.generated_cell_id !== null &&
+      !['draft', 'invalid', 'detached'].includes(this.document.compile_status);
+    return renderJobView({
+      state: this.job.view,
+      active: this.job.active,
+      canRun: runnable && !this.busy,
+      shots: this.shots,
+      seed: this.seed,
+      analogTimeSteps: this.analogTimeSteps,
+      onShots: value => {
+        this.shots = value;
+      },
+      onSeed: value => {
+        this.seed = value;
+      },
+      onAnalogTimeSteps: value => {
+        this.analogTimeSteps = value;
+      },
+      onRun: () => void this.job.start({
+        shots: this.shots,
+        seed: this.seed,
+        analogTimeSteps: this.analogTimeSteps
+      }),
+      onCancel: () => void this.job.cancel()
+    });
   }
 
   private updateChannelSegment(
@@ -477,10 +527,14 @@ export class AnalogEditorWidget extends Widget {
   private readonly panel: () => NotebookPanel | null;
   private readonly bridge: NotebookBridge;
   private readonly client: KernelClient;
+  private readonly job: JobController;
   private readonly documentId?: () => string;
   private message = 'Draft Analog program';
   private diagnostics: AnalogDiagnostic[] = [];
   private busy = false;
+  private shots = 100;
+  private seed = 2026;
+  private analogTimeSteps = 80;
   private panelBinding = 0;
 }
 

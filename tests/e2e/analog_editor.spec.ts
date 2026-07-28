@@ -40,30 +40,25 @@ test('compiles, runs, restores, validates, and detaches an Analog program', asyn
     .filter({ hasText: 'MockNeutralAtomTarget' })
     .first();
   await expect(generated).toContainText('AHSProgram');
-  await generated.locator('.cm-content').click();
-  await page.keyboard.press('Shift+Enter');
-  await expect(generated.locator('.jp-InputPrompt')).toContainText('[1]');
 
-  const analysisSource = [
-    'from IPython.display import display',
-    'from cascaqit.visualization import build_pulse_timeline, build_register_visualization',
-    'from cascaqit_jupyter import display_program, display_result, display_visualization',
-    'result = builder.run(shots=32, seed=2026, time_steps=80)',
-    'display(display_program(program))',
-    'display(display_result(result))',
-    'display(display_visualization(build_register_visualization(program)))',
-    'display(display_visualization(build_pulse_timeline(program)))'
-  ].join('\n');
-  const activeCell = page.locator('.jp-CodeCell.jp-mod-active .cm-content');
-  await expect(activeCell).toBeVisible();
-  await activeCell.click();
-  await page.keyboard.insertText(analysisSource);
-  await page.keyboard.press('Shift+Enter');
-  await expect(page.locator('.cascaqit-Renderer')).toHaveCount(4);
-  await expect(page.getByTestId('register-plot')).toHaveCount(2);
-  await expect(page.getByTestId('pulse-plot')).toHaveCount(2);
-  await expect(page.locator('.cascaqit-Renderer').filter({ hasText: 'Observed states' }))
-    .toContainText('32');
+  await editor.getByLabel('Shots').fill('32');
+  await editor.getByLabel('Seed').fill('2026');
+  await editor.getByLabel('Time steps').fill('80');
+  await editor.getByTestId('run-job').click();
+  await expect(editor.getByTestId('job-status')).toContainText('Completed');
+  await expect(editor.getByTestId('analog-editor-status')).toHaveText('Completed');
+  const result = editor.getByTestId('job-result');
+  await expect(result).toBeVisible();
+  await expect(result).toContainText('Probabilities');
+  await expect(result).toContainText('Simulation resources');
+  await expect(result).toContainText('Offline deterministic');
+  await expect(result).toContainText('32');
+  expect(await embeddedResultFits(result)).toBe(true);
+  await result.evaluate(node => node.scrollIntoView({ block: 'center' }));
+  await mkdir('artifacts/screenshots', { recursive: true });
+  await editor.screenshot({
+    path: `artifacts/screenshots/${testInfo.project.name}-analog-job.png`
+  });
 
   await page.locator('.jp-Notebook:visible').focus();
   await page.keyboard.press('Meta+S');
@@ -76,15 +71,26 @@ test('compiles, runs, restores, validates, and detaches an Analog program', asyn
     savedNotebook = (await response.json()).content;
     return Array.isArray(savedNotebook?.cells) && savedNotebook.cells.some(
       (cell: any) =>
-        cell.metadata?.cascaqit_jupyter?.editor_document?.program_kind === 'analog'
+        cell.metadata?.cascaqit_jupyter?.editor_document?.program_kind === 'analog' &&
+        cell.metadata?.cascaqit_jupyter?.editor_document?.metadata?.last_job?.state === 'completed'
     );
   }).toBe(true);
+  const savedCell = savedNotebook.cells.find(
+    (cell: any) => cell.metadata?.cascaqit_jupyter?.editor_document?.program_kind === 'analog'
+  );
+  expect(savedCell.metadata.cascaqit_jupyter.editor_document.metadata.last_job)
+    .toMatchObject({ state: 'completed', seed: 2026, shots: 32, analog_time_steps: 80 });
+  expect(
+    savedCell.metadata.cascaqit_jupyter.editor_document.metadata.last_job.result.result_id
+  ).toMatch(/^result\./);
 
   await page.reload();
   await expect(page.locator('.jp-Notebook:visible')).toBeVisible();
   await openAnalogEditor(page);
-  await expect(editor.getByTestId('analog-editor-status')).toHaveText('Ready');
+  await expect(editor.getByTestId('analog-editor-status')).toHaveText('Completed');
   await expect(editor).toContainText('Restored from generated cell metadata');
+  await expect(editor.getByTestId('job-status')).toContainText('Completed');
+  await expect(editor.getByTestId('job-status')).toContainText('jupyter_job.analog.');
   await expect(editor.getByTestId('generate-analog-cell')).toHaveText('Update cell');
 
   const siteX = editor.getByLabel('Site s1 x in micrometers');
@@ -121,7 +127,6 @@ test('compiles, runs, restores, validates, and detaches an Analog program', asyn
     const pixels = await visibleSvgPixels(editor.getByTestId(testId).locator('svg'));
     expect(pixels, testId).toBeGreaterThan(100);
   }
-  await mkdir('artifacts/screenshots', { recursive: true });
   await editor.screenshot({
     path: `artifacts/screenshots/${testInfo.project.name}-analog-editor.png`
   });
@@ -203,6 +208,21 @@ async function openAnalogEditor(page: any): Promise<void> {
     await page.keyboard.press('Alt+Shift+A');
     await expect(page.locator('.cascaqit-AnalogEditor')).toBeVisible({ timeout: 1000 });
   }).toPass({ timeout: 20_000, intervals: [500] });
+}
+
+async function embeddedResultFits(result: any): Promise<boolean> {
+  return result.evaluate((node: HTMLElement) => {
+    const bounds = node.getBoundingClientRect();
+    return Array.from(node.querySelectorAll(
+      '.cascaqit-Renderer, .cascaqit-Renderer-sectionHeading, .cascaqit-Renderer-sectionHeading > *'
+    ))
+      .every(item => {
+        const rect = item.getBoundingClientRect();
+        return rect.left >= bounds.left - 1 &&
+          rect.right <= bounds.right + 1 &&
+          item.scrollWidth <= item.clientWidth + 1;
+      });
+  });
 }
 
 async function putNotebook(

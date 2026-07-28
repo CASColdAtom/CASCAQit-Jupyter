@@ -5,6 +5,9 @@ export type Operation =
   | 'validate_document'
   | 'compile_digital'
   | 'compile_analog'
+  | 'start_job'
+  | 'job_status'
+  | 'cancel_job'
   | 'cancel';
 
 export interface CommRequest {

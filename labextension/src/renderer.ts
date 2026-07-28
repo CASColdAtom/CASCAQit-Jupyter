@@ -218,19 +218,87 @@ function renderResult(root: HTMLElement, data: JsonRecord): void {
     .map(([bitstring, value]) => ({ bitstring, count: number(value, 0) }))
     .sort((left, right) => right.count - left.count || left.bitstring.localeCompare(right.bitstring));
   const bitOrdering = record(data.bit_ordering);
+  const metadata = record(data.metadata);
   root.append(
     metricStrip([
       ['Shots', String(number(data.shots, 0))],
       ['Target', text(data.target_id, 'unknown')],
+      ['Seed', scalar(metadata.seed, 'n/a')],
+      ['Result ID', text(data.result_id, 'unknown')],
+      ['Program hash', shortHash(data.program_hash)],
       ['Bit order', formatBitOrdering(bitOrdering)],
       ['Observed states', String(bars.length)]
     ]),
     renderCountsPlot(bars, number(data.shots, 0), 'Measurement counts')
   );
+
+  const probabilities = Object.entries(record(data.probabilities))
+    .map(([state, value]) => [state, formatProbability(number(value, 0))] as [string, string])
+    .sort((left, right) => left[0].localeCompare(right[0]));
+  if (probabilities.length > 0) {
+    root.append(renderDataTable('Probabilities', probabilities));
+  }
+
+  const observables = Object.entries(record(data.observables)).flatMap(
+    ([group, value]) => Object.entries(record(value)).map(
+      ([name, sample]) => [`${group} / ${name}`, formatNumber(number(sample, 0))] as [string, string]
+    )
+  );
+  if (observables.length > 0) {
+    root.append(renderDataTable('Observables', observables));
+  }
+
+  const boundary: Array<[string, string]> = [
+    ['Backend', text(metadata.backend_id, 'unknown')],
+    ['Network accessed', yesNo(metadata.network_accessed)],
+    ['Offline deterministic', yesNo(metadata.offline_deterministic)],
+    ['Execution package created', yesNo(metadata.execution_package_created)]
+  ];
+  if (boundary.some(([, value]) => value !== 'n/a' && value !== 'unknown')) {
+    root.append(renderDataTable('Execution boundary', boundary));
+  }
+
+  const estimate = record(metadata.simulation_resource_estimate);
+  const usage = record(metadata.simulation_resource_usage);
+  const resources: Array<[string, string]> = [
+    ['Method', text(estimate.method, text(record(metadata.simulation_plan).method_selected, 'n/a'))],
+    ['Logical sites', scalar(estimate.logical_sites, 'n/a')],
+    ['Hilbert dimension', scalar(estimate.hilbert_dimension, 'n/a')],
+    ['Estimated peak', formatBytes(estimate.estimated_peak_bytes)],
+    ['Actual peak RSS', formatBytes(usage.actual_peak_rss_bytes)],
+    ['Incremental peak RSS', formatBytes(usage.incremental_peak_rss_bytes)],
+    ['Wall time', formatSeconds(usage.wall_time_seconds)],
+    ['Measurement scope', text(usage.measurement_scope, 'n/a')]
+  ];
+  if (resources.some(([, value]) => value !== 'n/a')) {
+    root.append(renderDataTable('Simulation resources', resources));
+  }
   const diagnostics = asArray(data.diagnostics);
   if (diagnostics.length > 0) {
     renderDiagnostics(root, diagnostics, 'Execution diagnostics');
   }
+}
+
+function renderDataTable(
+  title: string,
+  rows: Array<[string, string]>
+): HTMLElement {
+  const section = viewSection(title, `${rows.length} fields`);
+  const table = element('table', 'cascaqit-Renderer-dataTable');
+  const body = document.createElement('tbody');
+  rows.slice(0, 64).forEach(([label, value]) => {
+    const row = document.createElement('tr');
+    const key = document.createElement('th');
+    key.scope = 'row';
+    key.textContent = label;
+    const detail = document.createElement('td');
+    detail.textContent = value;
+    row.append(key, detail);
+    body.append(row);
+  });
+  table.append(body);
+  section.append(table);
+  return section;
 }
 
 function renderDiagnostics(
@@ -682,6 +750,52 @@ function text(value: unknown, fallback: string): string {
 
 function number(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+}
+
+function scalar(value: unknown, fallback: string): string {
+  return typeof value === 'string' || typeof value === 'number'
+    ? String(value)
+    : fallback;
+}
+
+function yesNo(value: unknown): string {
+  return typeof value === 'boolean' ? (value ? 'Yes' : 'No') : 'n/a';
+}
+
+function shortHash(value: unknown): string {
+  const hash = text(value, 'unknown');
+  return hash === 'unknown' ? hash : hash.slice(0, 16);
+}
+
+function formatProbability(value: number): string {
+  return `${(value * 100).toFixed(4).replace(/\.?0+$/, '')}%`;
+}
+
+function formatNumber(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toPrecision(8);
+}
+
+function formatBytes(value: unknown): string {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
+    return 'n/a';
+  }
+  if (value < 1024) {
+    return `${value} B`;
+  }
+  const units = ['KiB', 'MiB', 'GiB', 'TiB'];
+  let size = value / 1024;
+  let index = 0;
+  while (size >= 1024 && index < units.length - 1) {
+    size /= 1024;
+    index += 1;
+  }
+  return `${size.toFixed(size >= 10 ? 1 : 2)} ${units[index]}`;
+}
+
+function formatSeconds(value: unknown): string {
+  return typeof value === 'number' && Number.isFinite(value)
+    ? `${value.toFixed(4)} s`
+    : 'n/a';
 }
 
 function bool(value: unknown, fallback: boolean): boolean {

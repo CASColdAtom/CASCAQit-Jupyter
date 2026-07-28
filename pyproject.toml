@@ -26,10 +26,12 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
     "cascaqit>=1.0.5a,<1.1",
     "jsonschema>=4.18,<5",
+    "typing-extensions>=4.5,<5",
 ]
 
 [project.optional-dependencies]
