@@ -1,61 +1,407 @@
 .cascaqit-Renderer {
   box-sizing: border-box;
+  width: 100%;
+  min-width: 260px;
+  max-width: 100%;
+  overflow: hidden;
   border: 1px solid var(--jp-border-color2, #c9cdd3);
-  border-left: 4px solid #00796b;
   border-radius: 4px;
   background: var(--jp-layout-color1, #fff);
   color: var(--jp-ui-font-color1, #202124);
   font-family: var(--jp-ui-font-family, system-ui, sans-serif);
-  padding: 12px 14px;
-  min-width: 260px;
-  max-width: 100%;
 }
 
-.cascaqit-Renderer-heading {
-  font-size: 14px;
-  font-weight: 600;
+.cascaqit-Renderer *,
+.cascaqit-Renderer *::before,
+.cascaqit-Renderer *::after {
+  box-sizing: border-box;
+}
+
+.cascaqit-Renderer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 60px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--jp-border-color2, #c9cdd3);
+  background: var(--jp-layout-color2, #f6f7f8);
+}
+
+.cascaqit-Renderer-eyebrow {
+  color: #00796b;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 14px;
+  text-transform: uppercase;
+}
+
+.cascaqit-Renderer-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
   line-height: 20px;
 }
 
 .cascaqit-Renderer-identity {
-  overflow-wrap: anywhere;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-end;
   color: var(--jp-ui-font-color2, #5f6368);
+  font-size: 12px;
+  line-height: 17px;
+}
+
+.cascaqit-Renderer-identity span,
+.cascaqit-Renderer-identity code {
+  max-width: min(42vw, 420px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cascaqit-Renderer-identity code,
+.cascaqit-Diagnostic code {
   font-family: var(--jp-code-font-family, monospace);
+}
+
+.cascaqit-Renderer .cascaqit-Renderer-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  margin: 0;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--jp-border-color2, #c9cdd3);
+}
+
+.cascaqit-Renderer .cascaqit-Renderer-metrics > div {
+  min-width: 0;
+  padding: 3px 14px 3px 0;
+}
+
+.cascaqit-Renderer .cascaqit-Renderer-metrics dt {
+  float: none;
+  width: auto;
+  color: var(--jp-ui-font-color2, #5f6368);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.cascaqit-Renderer .cascaqit-Renderer-metrics dd {
+  float: none;
+  width: auto;
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 18px;
+}
+
+.cascaqit-Renderer-section {
+  width: 100%;
+  padding: 12px 14px 14px;
+}
+
+.cascaqit-Renderer-section + .cascaqit-Renderer-section {
+  border-top: 1px solid var(--jp-border-color2, #c9cdd3);
+}
+
+.cascaqit-Renderer-sectionHeading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.cascaqit-Renderer-sectionHeading h4 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 18px;
+}
+
+.cascaqit-Renderer-sectionHeading span {
+  color: var(--jp-ui-font-color2, #5f6368);
+  font-size: 11px;
+  line-height: 16px;
+  text-align: right;
+}
+
+.cascaqit-Renderer-domainGrid {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.85fr) minmax(340px, 1.15fr);
+}
+
+.cascaqit-Renderer-domainGrid > .cascaqit-Renderer-section + .cascaqit-Renderer-section {
+  border-top: 0;
+  border-left: 1px solid var(--jp-border-color2, #c9cdd3);
+}
+
+.cascaqit-Renderer-svgViewport,
+.cascaqit-Renderer-circuitViewport {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.cascaqit-Renderer svg {
+  display: block;
+  width: 100%;
+  min-width: 480px;
+  height: auto;
+  max-height: 420px;
+  background: var(--jp-layout-color1, #fff);
+}
+
+.cascaqit-Renderer-circuitViewport svg {
+  min-width: 560px;
+}
+
+.cascaqit-Svg-wire,
+.cascaqit-Svg-axis {
+  stroke: #7b818a;
+  stroke-width: 1;
+}
+
+.cascaqit-Svg-connector {
+  stroke: #30343b;
+  stroke-width: 2;
+}
+
+.cascaqit-Svg-gate {
+  fill: #e8f2ff;
+  stroke: #315b96;
+  stroke-width: 1.5;
+}
+
+.cascaqit-Svg-measure {
+  fill: #fff4d6;
+  stroke: #8b6508;
+  stroke-width: 1.5;
+}
+
+.cascaqit-Svg-control {
+  fill: #30343b;
+}
+
+.cascaqit-Svg-target {
+  fill: #fff;
+  stroke: #30343b;
+  stroke-width: 2;
+}
+
+.cascaqit-Svg-targetLine {
+  stroke: #30343b;
+  stroke-width: 2;
+}
+
+.cascaqit-Svg-label,
+.cascaqit-Svg-gateText,
+.cascaqit-Svg-value,
+.cascaqit-Svg-tick,
+.cascaqit-Svg-axisLabel,
+.cascaqit-Svg-unit {
+  fill: var(--jp-ui-font-color1, #202124);
+  font-family: var(--jp-ui-font-family, system-ui, sans-serif);
+  font-size: 12px;
+}
+
+.cascaqit-Svg-label {
+  font-weight: 600;
+}
+
+.cascaqit-Svg-gateText,
+.cascaqit-Svg-value,
+.cascaqit-Svg-tick {
+  text-anchor: middle;
+}
+
+.cascaqit-Svg-gateText {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.cascaqit-Svg-unit {
+  fill: var(--jp-ui-font-color2, #5f6368);
+  font-size: 10px;
+}
+
+.cascaqit-Svg-axisLabel {
+  fill: var(--jp-ui-font-color2, #5f6368);
+  font-size: 10px;
+  text-anchor: end;
+}
+
+.cascaqit-Svg-bar {
+  fill: #3c78b5;
+}
+
+.cascaqit-Svg-siteFilled {
+  fill: #00796b;
+  stroke: #004d40;
+  stroke-width: 2;
+}
+
+.cascaqit-Svg-siteVacant {
+  fill: #fff;
+  stroke: #7b818a;
+  stroke-dasharray: 3 2;
+  stroke-width: 2;
+}
+
+.cascaqit-Svg-wave {
+  fill: none;
+  stroke-width: 2.5;
+}
+
+.cascaqit-Svg-wave-0 {
+  stroke: #00796b;
+}
+
+.cascaqit-Svg-wave-1 {
+  stroke: #315b96;
+}
+
+.cascaqit-Svg-wave-2 {
+  stroke: #9a5b13;
+}
+
+.cascaqit-Renderer-diagnostics {
+  border-top: 1px solid var(--jp-border-color2, #c9cdd3);
+}
+
+.cascaqit-Diagnostic {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--jp-border-color2, #c9cdd3);
+}
+
+.cascaqit-Diagnostic-marker {
+  align-self: start;
+  border-left: 3px solid #315b96;
+  padding-left: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+}
+
+.cascaqit-Diagnostic[data-severity='warning'] .cascaqit-Diagnostic-marker {
+  border-left-color: #9a5b13;
+}
+
+.cascaqit-Diagnostic[data-severity='error'] .cascaqit-Diagnostic-marker {
+  border-left-color: #b3261e;
+}
+
+.cascaqit-Diagnostic-heading {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+  line-height: 18px;
+}
+
+.cascaqit-Diagnostic-heading span {
+  color: var(--jp-ui-font-color2, #5f6368);
+  font-size: 11px;
+}
+
+.cascaqit-Diagnostic p {
+  margin: 3px 0 0;
+  overflow-wrap: anywhere;
   font-size: 12px;
   line-height: 18px;
 }
 
-.cascaqit-Renderer-summary {
-  display: grid;
-  grid-template-columns: minmax(96px, max-content) minmax(0, 1fr);
-  gap: 4px 16px;
-  margin: 10px 0 0;
-  font-size: 13px;
-  line-height: 18px;
-}
-
-.cascaqit-Renderer-summary dt {
+.cascaqit-Diagnostic-suggestion {
   color: var(--jp-ui-font-color2, #5f6368);
 }
 
-.cascaqit-Renderer-summary dd {
-  min-width: 0;
-  margin: 0;
+.cascaqit-Renderer-blocks {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.cascaqit-HybridBlock {
+  display: grid;
+  min-width: 150px;
+  grid-template-columns: 28px minmax(0, 1fr);
+  border-bottom: 2px solid #315b96;
+  padding: 7px 4px;
+}
+
+.cascaqit-HybridBlock > span {
+  color: var(--jp-ui-font-color2, #5f6368);
+  font-size: 11px;
+}
+
+.cascaqit-HybridBlock strong,
+.cascaqit-HybridBlock div > span {
+  display: block;
   overflow-wrap: anywhere;
+  font-size: 12px;
+  line-height: 17px;
+}
+
+.cascaqit-HybridBlock div > span {
+  color: var(--jp-ui-font-color2, #5f6368);
+}
+
+.cascaqit-Renderer-empty,
+.cascaqit-Renderer-error {
+  margin: 0;
+  padding: 14px;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.cascaqit-Renderer-empty {
+  color: var(--jp-ui-font-color2, #5f6368);
 }
 
 .cascaqit-Renderer-error {
+  border-left: 3px solid #b3261e;
   color: var(--jp-error-color1, #b3261e);
   font-weight: 600;
 }
 
-@media (max-width: 480px) {
-  .cascaqit-Renderer-summary {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0;
+@media (max-width: 700px) {
+  .cascaqit-Renderer-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
   }
 
-  .cascaqit-Renderer-summary dd + dt {
-    margin-top: 6px;
+  .cascaqit-Renderer-identity {
+    width: 100%;
+    align-items: flex-start;
+  }
+
+  .cascaqit-Renderer-identity span,
+  .cascaqit-Renderer-identity code {
+    max-width: 100%;
+  }
+
+  .cascaqit-Renderer-domainGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cascaqit-Renderer .cascaqit-Renderer-metrics {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cascaqit-Renderer-domainGrid > .cascaqit-Renderer-section + .cascaqit-Renderer-section {
+    border-top: 1px solid var(--jp-border-color2, #c9cdd3);
+    border-left: 0;
+  }
+
+  .cascaqit-Diagnostic {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
   }
 }

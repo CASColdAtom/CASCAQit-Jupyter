@@ -55,12 +55,14 @@ packages = ["src/cascaqit_jupyter"]
 [tool.hatch.build.targets.sdist]
 include = [
     "labextension",
+    "examples",
     "src/cascaqit_jupyter",
     "tests",
     "LICENSE",
     "README.md",
     "package-lock.json",
     "package.json",
+    "playwright.config.ts",
     "pyproject.toml",
     "tsconfig.json",
     "tsconfig.test.json",

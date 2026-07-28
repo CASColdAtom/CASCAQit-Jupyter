@@ -15,7 +15,8 @@
     "build:lib": "tsc --build --force",
     "build:prod": "npm run clean && npm run build:lib && npm run build:labextension",
     "clean": "rimraf lib src/cascaqit_jupyter/labextension",
-    "test:frontend": "vitest run",
+    "test:e2e": "sh tests/e2e/run.sh",
+    "test:frontend": "vitest run labextension/test",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json"
   },
   "dependencies": {
@@ -24,6 +25,8 @@
   },
   "devDependencies": {
     "@jupyterlab/builder": "^4.5.10",
+    "@playwright/test": "^1.62.0",
+    "jsdom": "^26.1.0",
     "rimraf": "^6.1.2",
     "typescript": "^5.9.3",
     "vitest": "^4.0.17"
@@ -34,7 +37,7 @@
     }
   },
   "jupyterlab": {
-    "extension": true,
+    "mimeExtension": true,
     "outputDir": "src/cascaqit_jupyter/labextension"
   }
 }

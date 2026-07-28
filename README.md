@@ -6,7 +6,7 @@ Install a released CASCAQit `>=1.0.5a,<1.1` wheel first, then install this sourc
 
 ```console
 npm ci
-python -m pip install -e ".[lab,test]"
+python -m pip install ".[lab,test]"
 jupyter labextension list
 ```
 
@@ -27,6 +27,16 @@ display(display_result(result))
 display(display_visualization(build_counts_histogram(result)))
 ```
 
-The renderer creates text-only DOM nodes from versioned JSON payloads; it does not execute HTML or JavaScript carried by a result. This preview is read-only. Versioned `EditorDocumentIR`, MIME, and low-level kernel comm contracts are available, including kernel-epoch, document-revision, timeout, and cooperative-cancel semantics, but the renderer does not open that comm automatically yet. Job execution controls, the Digital editor, the Analog register/waveform editor, save/reopen synchronization, and the `detached` conflict workflow are not implemented yet.
+The renderer currently provides:
+
+- Digital circuit wires, gates, controls, targets, and terminal measurements.
+- Analog atom-register and global Rabi, detuning, and phase views.
+- Result counts, shots, target identity, explicit bit ordering, and execution diagnostics.
+- Counts histogram, register, pulse timeline, and plan-only Hybrid timeline Visualization IR views.
+- Non-color diagnostic severity labels with code, object path, message, and suggestion fields.
+
+Open [`examples/read_only_renderers.ipynb`](examples/read_only_renderers.ipynb) to inspect every current view with deterministic local data. The renderer creates controlled DOM and SVG elements from versioned JSON payloads; dynamic values are assigned through `textContent`, so HTML or JavaScript carried in a diagnostic is displayed as text rather than executed.
+
+This preview is read-only. Versioned `EditorDocumentIR`, MIME, and low-level kernel comm contracts are available, including kernel-epoch, document-revision, timeout, and cooperative-cancel semantics, but the renderer does not open that comm automatically yet. Job execution controls, the Digital editor, the Analog register/waveform editor, save/reopen synchronization, and the `detached` conflict workflow are not implemented yet.
 
 The implementation consumes released public CASCAQit APIs only. It does not import `cascaqit._internal`, depend on `cascaqit-compat`, copy simulator code, contact live hardware or CASCAQit Cloud, or depend on CASCAQit-Skills.
