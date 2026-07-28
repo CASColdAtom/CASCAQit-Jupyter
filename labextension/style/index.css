@@ -1,0 +1,61 @@
+.cascaqit-Renderer {
+  box-sizing: border-box;
+  border: 1px solid var(--jp-border-color2, #c9cdd3);
+  border-left: 4px solid #00796b;
+  border-radius: 4px;
+  background: var(--jp-layout-color1, #fff);
+  color: var(--jp-ui-font-color1, #202124);
+  font-family: var(--jp-ui-font-family, system-ui, sans-serif);
+  padding: 12px 14px;
+  min-width: 260px;
+  max-width: 100%;
+}
+
+.cascaqit-Renderer-heading {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.cascaqit-Renderer-identity {
+  overflow-wrap: anywhere;
+  color: var(--jp-ui-font-color2, #5f6368);
+  font-family: var(--jp-code-font-family, monospace);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.cascaqit-Renderer-summary {
+  display: grid;
+  grid-template-columns: minmax(96px, max-content) minmax(0, 1fr);
+  gap: 4px 16px;
+  margin: 10px 0 0;
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.cascaqit-Renderer-summary dt {
+  color: var(--jp-ui-font-color2, #5f6368);
+}
+
+.cascaqit-Renderer-summary dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.cascaqit-Renderer-error {
+  color: var(--jp-error-color1, #b3261e);
+  font-weight: 600;
+}
+
+@media (max-width: 480px) {
+  .cascaqit-Renderer-summary {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .cascaqit-Renderer-summary dd + dt {
+    margin-top: 6px;
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "name": "@cascaqit/jupyter",
+  "version": "0.1.0-alpha.1",
+  "description": "Safe MIME renderers for CASCAQit in JupyterLab 4 and Notebook 7",
+  "license": "Apache-2.0",
+  "private": true,
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "files": [
+    "lib/**/*",
+    "labextension/style/**/*"
+  ],
+  "scripts": {
+    "build:labextension": "jupyter labextension build .",
+    "build:lib": "tsc --build --force",
+    "build:prod": "npm run clean && npm run build:lib && npm run build:labextension",
+    "clean": "rimraf lib src/cascaqit_jupyter/labextension",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@jupyterlab/rendermime-interfaces": "^3.13.10",
+    "@lumino/widgets": "^2.9.0"
+  },
+  "devDependencies": {
+    "@jupyterlab/builder": "^4.5.10",
+    "rimraf": "^6.1.2",
+    "typescript": "^5.9.3"
+  },
+  "overrides": {
+    "@jupyterlab/builder": {
+      "glob": "^13.0.6"
+    }
+  },
+  "jupyterlab": {
+    "extension": true,
+    "outputDir": "src/cascaqit_jupyter/labextension"
+  }
+}

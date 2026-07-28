@@ -7,10 +7,12 @@ __pycache__/
 .venv/
 node_modules/
 lib/
+*.tsbuildinfo
 dist/
 build/
 *.egg-info/
 /artifacts/
 /test-results/
 /playwright-report/
+/src/cascaqit_jupyter/labextension/
 /plan/
