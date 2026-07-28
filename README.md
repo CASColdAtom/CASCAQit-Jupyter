@@ -1,6 +1,24 @@
 # CASCAQit Jupyter
 
+[![在 GitHub Codespaces 中运行](https://github.com/codespaces/badge.svg)](https://codespaces.new/CASColdAtom/CASCAQit-Jupyter?quickstart=1)
+
 CASCAQit-Jupyter 为 JupyterLab 4 和 Notebook 7 提供 CASCAQit 中性原子量子编程集成。当前版本包含可安装的 Python kernel companion（内核伴随包）、Digital 和 Analog 可视化编辑器，以及面向 CASCAQit Program、Result、Diagnostics 和 Visualization IR 公开对象的安全 MIME 渲染器。
+
+## 在 GitHub Codespaces 中运行（内部）
+
+此入口仅供拥有私有仓库 `CASColdAtom/CASCAQit` 读取权限的协作者使用。点击上方按钮并选择 **Create codespace**；GitHub 会要求授予当前 Codespace 对 Core 仓库的只读 `contents` 权限。没有 Core 权限的账号不能完成环境安装。
+
+首次创建时，容器通过 GitHub 管理的短期 Codespaces 身份下载 CASCAQit `1.0.5a0` Release wheel，并在安装前校验 SHA256。仓库和容器配置都不保存长期访问令牌。随后容器会安装 Node.js 22、JupyterLab 和本扩展，并自动在 8888 端口启动 JupyterLab。
+
+在 Codespaces 的 **PORTS** 面板打开 `CASCAQit JupyterLab`。JupyterLab 保留随机访问令牌；出现登录页时，在 Codespaces 终端运行下面的命令，复制 URL 中 `token=` 后的值：
+
+```console
+jupyter server list
+```
+
+8888 端口默认保持私有，不要将其改为公开。可以直接打开 [`examples/digital_editor.ipynb`](examples/digital_editor.ipynb)、[`examples/analog_editor.ipynb`](examples/analog_editor.ipynb) 或 [`examples/read_only_renderers.ipynb`](examples/read_only_renderers.ipynb)。Codespace 暂停后再次启动时，启动脚本会恢复 JupyterLab；已有服务不会被重复启动。
+
+维护者可以从 GitHub Actions 手动运行 `Internal Codespaces Environment`。该工作流需要仓库 secret `CASCAQIT_CORE_TOKEN`，其凭证只应具有私有 Core 仓库的只读 Contents 权限。此 secret 只用于 CI，不提供给 Codespace 用户。
 
 ## 安装
 
