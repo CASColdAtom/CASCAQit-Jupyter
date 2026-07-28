@@ -11,6 +11,289 @@
   font-family: var(--jp-ui-font-family, system-ui, sans-serif);
 }
 
+.cascaqit-Editor {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 240px;
+  max-width: 100%;
+  overflow: auto;
+  background: var(--jp-layout-color1, #fff);
+  color: var(--jp-ui-font-color1, #202124);
+  font-family: var(--jp-ui-font-family, system-ui, sans-serif);
+}
+
+.cascaqit-Editor *,
+.cascaqit-Editor *::before,
+.cascaqit-Editor *::after {
+  box-sizing: border-box;
+}
+
+.cascaqit-Editor-header {
+  position: sticky;
+  z-index: 2;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 58px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--jp-border-color2, #c9cdd3);
+  background: var(--jp-layout-color2, #f6f7f8);
+}
+
+.cascaqit-Editor-eyebrow {
+  color: #00796b;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 14px;
+  text-transform: uppercase;
+}
+
+.cascaqit-Editor-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 21px;
+}
+
+.cascaqit-Editor-status {
+  flex: 0 0 auto;
+  padding: 3px 7px;
+  border: 1px solid #7b818a;
+  border-radius: 3px;
+  background: var(--jp-layout-color1, #fff);
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 16px;
+}
+
+.cascaqit-Editor-status.is-ready {
+  border-color: #00796b;
+}
+
+.cascaqit-Editor-status.is-invalid,
+.cascaqit-Editor-status.is-detached {
+  border-color: #9a5b00;
+  border-style: dashed;
+}
+
+.cascaqit-Editor-body {
+  width: 100%;
+  min-width: 0;
+}
+
+.cascaqit-Editor-section {
+  width: 100%;
+  padding: 12px;
+  border-bottom: 1px solid var(--jp-border-color2, #c9cdd3);
+}
+
+.cascaqit-Editor-section h3 {
+  margin: 0 0 9px;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 18px;
+}
+
+.cascaqit-Editor-list,
+.cascaqit-Editor-gates {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+}
+
+.cascaqit-Editor-row,
+.cascaqit-Editor-gate,
+.cascaqit-Editor-fields {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+}
+
+.cascaqit-Editor-row input,
+.cascaqit-Editor-fields input[type='text'] {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.cascaqit-Editor input,
+.cascaqit-Editor select,
+.cascaqit-Editor button {
+  min-height: 30px;
+  border: 1px solid var(--jp-border-color1, #aeb3ba);
+  border-radius: 3px;
+  background: var(--jp-layout-color1, #fff);
+  color: inherit;
+  font: inherit;
+  letter-spacing: 0;
+}
+
+.cascaqit-Editor input,
+.cascaqit-Editor select {
+  padding: 4px 7px;
+}
+
+.cascaqit-Editor button {
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.cascaqit-Editor button:hover:not(:disabled),
+.cascaqit-Editor button:focus-visible {
+  border-color: #315b96;
+  background: #e8f2ff;
+}
+
+.cascaqit-Editor button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.cascaqit-Editor-gateForm {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.cascaqit-Editor-gateForm button {
+  grid-column: 1 / -1;
+}
+
+.cascaqit-Editor-gate {
+  justify-content: space-between;
+  padding: 7px;
+  border: 1px solid var(--jp-border-color2, #c9cdd3);
+  border-radius: 3px;
+}
+
+.cascaqit-Editor-gateSummary {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.cascaqit-Editor-gateCommands {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 4px;
+}
+
+.cascaqit-Editor-gateCommands button {
+  min-height: 26px;
+  padding: 2px 5px;
+  font-size: 11px;
+}
+
+.cascaqit-Editor-empty,
+.cascaqit-Editor-message {
+  margin: 0;
+  color: var(--jp-ui-font-color2, #5f6368);
+  font-size: 12px;
+  line-height: 17px;
+}
+
+.cascaqit-Editor-preview {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid var(--jp-border-color2, #c9cdd3);
+  background: var(--jp-layout-color1, #fff);
+}
+
+.cascaqit-Editor-preview svg {
+  display: block;
+  width: 100%;
+  min-width: 420px;
+  height: auto;
+  max-height: 280px;
+}
+
+.cascaqit-Editor-svgWire {
+  stroke: #7b818a;
+  stroke-width: 1;
+}
+
+.cascaqit-Editor-svgConnector {
+  stroke: #30343b;
+  stroke-width: 2;
+}
+
+.cascaqit-Editor-svgGate {
+  fill: #e8f2ff;
+  stroke: #315b96;
+  stroke-width: 1.5;
+}
+
+.cascaqit-Editor-svgLabel,
+.cascaqit-Editor-svgGateText {
+  fill: var(--jp-ui-font-color1, #202124);
+  font-family: var(--jp-ui-font-family, system-ui, sans-serif);
+  font-size: 11px;
+}
+
+.cascaqit-Editor-svgLabel {
+  font-weight: 600;
+}
+
+.cascaqit-Editor-svgGateText {
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.cascaqit-Editor-message {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--jp-border-color2, #c9cdd3);
+}
+
+.cascaqit-Editor-diagnostics {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  overflow-wrap: anywhere;
+}
+
+.cascaqit-Editor-actions {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  justify-content: flex-end;
+  padding: 10px 12px;
+  background: var(--jp-layout-color2, #f6f7f8);
+}
+
+.cascaqit-Editor-actions button {
+  border-color: #315b96;
+  background: #315b96;
+  color: #fff;
+  font-weight: 650;
+}
+
+@media (max-width: 520px) {
+  .cascaqit-Editor-gateForm {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cascaqit-Editor-gateForm button {
+    grid-column: auto;
+  }
+
+  .cascaqit-Editor-gate {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .cascaqit-Editor-gateCommands button {
+    flex: 1 1 0;
+  }
+}
+
 .cascaqit-Renderer *,
 .cascaqit-Renderer *::before,
 .cascaqit-Renderer *::after {

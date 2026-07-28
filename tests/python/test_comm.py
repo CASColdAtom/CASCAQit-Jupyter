@@ -103,6 +103,86 @@ def test_unknown_editor_schema_returns_a_structured_validation_error() -> None:
     assert response["error"]["stage"] == "validation"
 
 
+def test_compile_digital_returns_source_program_and_cell_metadata() -> None:
+    session = KernelSession(kernel_epoch="epoch-1")
+    document = digital_document()
+
+    response = session.handle(
+        request(
+            session,
+            request_id="compile-1",
+            operation="compile_digital",
+            payload={
+                "document": document,
+                "generated_cell_id": "cell-bell",
+                "current_source": None,
+            },
+        )
+    )
+
+    assert response["status"] == "ok"
+    payload = response["payload"]
+    assert payload["detached"] is False
+    assert payload["document"]["compile_status"] == "ready"
+    assert payload["document"]["generated_cell_id"] == "cell-bell"
+    assert payload["generated_source"].endswith("program = circuit.to_program()\n")
+    assert payload["program"]["program_type"] == "digital"
+    assert payload["program_hash"] == payload["document"]["source_program_hash"]
+    metadata = payload["cell_metadata"]["cascaqit_jupyter"]
+    assert metadata["editor_document"] == payload["document"]
+
+
+def test_compile_digital_preserves_modified_source_as_detached() -> None:
+    session = KernelSession(kernel_epoch="epoch-1")
+    initial = session.handle(
+        request(
+            session,
+            request_id="compile-1",
+            operation="compile_digital",
+            payload={"document": digital_document()},
+        )
+    )
+    document = initial["payload"]["document"]
+    user_source = initial["payload"]["generated_source"] + "# user change\n"
+
+    detached = session.handle(
+        request(
+            session,
+            request_id="compile-2",
+            operation="compile_digital",
+            payload={"document": document, "current_source": user_source},
+        )
+    )
+
+    assert detached["status"] == "ok"
+    assert detached["payload"]["detached"] is True
+    assert detached["payload"]["generated_source"] is None
+    assert detached["payload"]["document"]["compile_status"] == "detached"
+    assert detached["payload"]["diagnostics"][0]["code"] == (
+        "GENERATED_CELL_DETACHED"
+    )
+
+
+def test_compile_digital_returns_element_scoped_validation_fault() -> None:
+    session = KernelSession(kernel_epoch="epoch-1")
+    document = digital_document()
+    document["editor_model"]["gates"][0]["targets"] = ["missing"]
+
+    response = session.handle(
+        request(
+            session,
+            request_id="compile-1",
+            operation="compile_digital",
+            payload={"document": document},
+        )
+    )
+
+    assert response["status"] == "error"
+    assert response["error"]["code"] == "EDITOR_DIGITAL_GATE_TARGET_UNKNOWN"
+    assert response["error"]["object_path"] == "editor_model.gates[0].targets"
+    assert response["error"]["details"]["diagnostics"][0]["suggestion"]
+
+
 def test_cancel_is_cooperative_and_requires_a_running_target() -> None:
     session = KernelSession(kernel_epoch="epoch-1")
     calls: list[str] = []

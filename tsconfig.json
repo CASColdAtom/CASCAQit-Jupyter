@@ -8,6 +8,7 @@
     "noEmitOnError": true,
     "outDir": "lib",
     "rootDir": "labextension/src",
+    "skipLibCheck": true,
     "strict": true,
     "target": "ES2022"
   },

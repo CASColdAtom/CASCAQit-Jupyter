@@ -1,6 +1,10 @@
 export const COMM_SCHEMA_VERSION = '1.0';
 
-export type Operation = 'ping' | 'validate_document' | 'cancel';
+export type Operation =
+  | 'ping'
+  | 'validate_document'
+  | 'compile_digital'
+  | 'cancel';
 
 export interface CommRequest {
   schema_version: '1.0';

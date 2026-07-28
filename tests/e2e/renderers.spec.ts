@@ -8,7 +8,9 @@ test('renders every read-only domain view without overflow or executable markup'
   page
 }, testInfo) => {
   const notebookFrontend = testInfo.project.name.startsWith('notebook');
-  const route = notebookFrontend ? 'tree' : 'lab/tree';
+  const route = notebookFrontend
+    ? 'tree'
+    : `lab/workspaces/cascaqit-renderers-${testInfo.project.name}/tree`;
   await page.goto(`${SERVER_URL}/${route}/${NOTEBOOK_PATH}`);
 
   const renderers = page.locator('.cascaqit-Renderer');

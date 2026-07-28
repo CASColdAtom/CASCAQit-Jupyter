@@ -89,6 +89,7 @@ npm = ["npm"]
 [tool.pytest.ini_options]
 testpaths = ["tests/python"]
 addopts = ["--strict-markers", "--strict-config"]
+pythonpath = ["src"]
 
 [tool.ruff]
 target-version = "py39"

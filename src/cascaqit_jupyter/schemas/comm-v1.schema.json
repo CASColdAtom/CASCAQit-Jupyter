@@ -55,7 +55,12 @@
             "document_revision": { "type": "integer", "minimum": 0 },
             "kernel_epoch": { "$ref": "#/$defs/nonEmptyId" },
             "operation": {
-              "enum": ["ping", "validate_document", "cancel"]
+              "enum": [
+                "ping",
+                "validate_document",
+                "compile_digital",
+                "cancel"
+              ]
             },
             "timeout_ms": {
               "type": "integer",

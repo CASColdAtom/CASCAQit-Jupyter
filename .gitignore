@@ -1,5 +1,6 @@
 .DS_Store
 __pycache__/
+.ipynb_checkpoints/
 *.py[cod]
 .pytest_cache/
 .ruff_cache/

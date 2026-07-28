@@ -7,7 +7,7 @@
   "event": "kernel_ready",
   "payload": {
     "comm_target": "cascaqit.jupyter.v1",
-    "operations": ["ping", "validate_document", "cancel"],
+    "operations": ["ping", "validate_document", "compile_digital", "cancel"],
     "cooperative_cancel": true
   }
 }

@@ -22,12 +22,12 @@ def test_labextension_discovery_contract_is_stable() -> None:
     ]
 
 
-def test_frontend_is_declared_as_a_mime_extension() -> None:
+def test_frontend_declares_editor_and_mime_extension_entries() -> None:
     package = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))
     metadata = package["jupyterlab"]
 
     assert metadata["mimeExtension"] is True
-    assert "extension" not in metadata
+    assert metadata["extension"] == "lib/plugin.js"
 
 
 def test_installed_wheel_contains_prebuilt_extension_when_available() -> None:
