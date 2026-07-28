@@ -1,0 +1,16 @@
+.DS_Store
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+node_modules/
+lib/
+dist/
+build/
+*.egg-info/
+/artifacts/
+/test-results/
+/playwright-report/
+/plan/
