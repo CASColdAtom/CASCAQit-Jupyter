@@ -105,3 +105,7 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 python_version = "3.9"
 strict = true
 files = ["src/cascaqit_jupyter", "tests/python"]
+
+[[tool.mypy.overrides]]
+module = ["bokeh", "bokeh.*"]
+follow_imports = "skip"
