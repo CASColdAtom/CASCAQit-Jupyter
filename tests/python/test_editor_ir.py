@@ -10,7 +10,7 @@ from cascaqit_jupyter.editor_ir import (
     migrate_editor_document,
 )
 from cascaqit_jupyter.schema import SchemaContractError, load_schema
-from tests.python.support import digital_document
+from tests.python.support import analog_document, digital_document
 
 
 def test_packaged_schemas_are_valid_draft_2020_12() -> None:
@@ -53,3 +53,23 @@ def test_program_kind_and_editor_model_discriminator_must_match() -> None:
 
     with pytest.raises(SchemaContractError, match="SCHEMA_VALIDATION_FAILED"):
         EditorDocumentIR.from_dict(invalid)
+
+
+def test_square_analog_layout_is_part_of_the_editor_schema() -> None:
+    raw = analog_document()
+    raw["editor_model"]["register"]["layout_tool"] = {
+        "shape": "square",
+        "atom_count": 4,
+        "rows": 2,
+        "columns": 2,
+        "spacing_x": 5,
+        "spacing_y": 5,
+        "radius": 8,
+        "rings": 1,
+        "center_x": 0,
+        "center_y": 0,
+    }
+
+    assert EditorDocumentIR.from_dict(raw).editor_model["register"]["layout_tool"][
+        "shape"
+    ] == "square"

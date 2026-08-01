@@ -4,6 +4,7 @@ export type AnalogChannel = 'rabi' | 'detuning' | 'phase';
 export type AnalogRegisterShape =
   | 'custom'
   | 'line'
+  | 'square'
   | 'rectangle'
   | 'triangle'
   | 'ring'
@@ -188,7 +189,7 @@ export function applyRegisterLayout(
   value: AnalogRegisterLayout
 ): AnalogEditorDocument {
   return edit(document, model => {
-    const layout = fitRegisterLayout(
+    const layout = layoutForSiteCount(
       normalizeRegisterLayout(value),
       model.register.sites.length
     );
@@ -311,37 +312,38 @@ function normalizeRegisterLayout(
     spacing_x: positiveFinite(value.spacing_x, 5),
     spacing_y: positiveFinite(value.spacing_y, 5),
     radius: positiveFinite(value.radius, 8),
-    rings: integerInRange(value.rings, 1, 5, 1),
+    rings: integerInRange(value.rings, 1, 20, 1),
     center_x: finite(value.center_x, 0),
     center_y: finite(value.center_y, 0)
   };
 }
 
-function fitRegisterLayout(
+function layoutForSiteCount(
   layout: AnalogRegisterLayout,
-  minimumSites: number
+  siteCount: number
 ): AnalogRegisterLayout {
   const fitted = { ...layout };
-  if (fitted.shape === 'line' || fitted.shape === 'ring') {
-    fitted.atom_count = Math.min(
-      100,
-      Math.max(fitted.atom_count, minimumSites)
-    );
+  fitted.atom_count = Math.min(100, siteCount);
+  if (fitted.shape === 'square') {
+    fitted.columns = Math.min(20, Math.ceil(Math.sqrt(siteCount)));
+    fitted.rows = Math.min(20, Math.ceil(siteCount / fitted.columns));
+    fitted.spacing_y = fitted.spacing_x;
   } else if (fitted.shape === 'rectangle' || fitted.shape === 'triangle') {
-    if (fitted.rows * fitted.columns < minimumSites) {
+    if (fitted.rows * fitted.columns < siteCount) {
       fitted.columns = Math.min(
         20,
-        Math.max(fitted.columns, Math.ceil(minimumSites / fitted.rows))
+        Math.max(fitted.columns, Math.ceil(siteCount / fitted.rows))
       );
     }
-    if (fitted.rows * fitted.columns < minimumSites) {
+    if (fitted.rows * fitted.columns < siteCount) {
       fitted.rows = Math.min(
         20,
-        Math.max(fitted.rows, Math.ceil(minimumSites / fitted.columns))
+        Math.max(fitted.rows, Math.ceil(siteCount / fitted.columns))
       );
     }
   } else if (fitted.shape === 'hexagonal') {
-    while (fitted.rings < 5 && hexagonalSiteCount(fitted.rings) < minimumSites) {
+    fitted.rings = 1;
+    while (fitted.rings < 20 && hexagonalSiteCount(fitted.rings) < siteCount) {
       fitted.rings += 1;
     }
   }
@@ -352,28 +354,44 @@ function sitesForLayout(
   layout: AnalogRegisterLayout,
   existingSites: AnalogSite[] = []
 ): AnalogSite[] {
+  const siteCount = existingSites.length;
   let coordinates: Array<[number, number]>;
   switch (layout.shape) {
     case 'line':
-      coordinates = Array.from({ length: layout.atom_count }, (_, index) => [
+      coordinates = Array.from({ length: siteCount }, (_, index) => [
         index * layout.spacing_x,
         0
       ]);
       break;
+    case 'square':
+      coordinates = rectangularCoordinates(
+        siteCount,
+        layout.columns,
+        layout.spacing_x,
+        layout.spacing_x
+      );
+      break;
     case 'rectangle':
-      coordinates = rectangularCoordinates(layout);
+      coordinates = rectangularCoordinates(
+        siteCount,
+        layout.columns,
+        layout.spacing_x,
+        layout.spacing_y
+      );
       break;
     case 'triangle':
-      coordinates = Array.from({ length: layout.rows }, (_, row) =>
-        Array.from({ length: layout.columns }, (_, column) => [
+      coordinates = Array.from({ length: siteCount }, (_, index) => {
+        const row = Math.floor(index / layout.columns);
+        const column = index % layout.columns;
+        return [
           (column + (row % 2) / 2) * layout.spacing_x,
           row * layout.spacing_x * Math.sqrt(3) / 2
-        ] as [number, number])
-      ).flat();
+        ];
+      });
       break;
     case 'ring':
-      coordinates = Array.from({ length: layout.atom_count }, (_, index) => {
-        const angle = (2 * Math.PI * index) / layout.atom_count;
+      coordinates = Array.from({ length: siteCount }, (_, index) => {
+        const angle = (2 * Math.PI * index) / siteCount;
         return [
           layout.radius * Math.cos(angle),
           layout.radius * Math.sin(angle)
@@ -381,39 +399,29 @@ function sitesForLayout(
       });
       break;
     case 'hexagonal':
-      coordinates = hexagonalCoordinates(layout.rings, layout.spacing_x);
+      coordinates = hexagonalCoordinatesForCount(siteCount, layout.spacing_x);
       break;
     case 'custom':
       return [];
   }
   const centered = centerCoordinates(coordinates, layout.center_x, layout.center_y);
-  const existingIds = new Set(existingSites.map(site => site.id));
-  const deployed = centered.map(([x, y], index) => {
-    const existing = existingSites[index];
-    const id = existing?.id ?? nextId(existingIds, 's');
-    existingIds.add(id);
-    return {
-      id,
-      x: rounded(x),
-      y: rounded(y),
-      occupied: existing?.occupied ?? true
-    };
-  });
-  if (deployed.length < existingSites.length) {
-    deployed.push(...structuredClone(existingSites.slice(deployed.length)));
-  }
-  return deployed;
+  return centered.map(([x, y], index) => ({
+    ...existingSites[index],
+    x: rounded(x),
+    y: rounded(y)
+  }));
 }
 
 function rectangularCoordinates(
-  layout: AnalogRegisterLayout
+  count: number,
+  columns: number,
+  spacingX: number,
+  spacingY: number
 ): Array<[number, number]> {
-  return Array.from({ length: layout.rows }, (_, row) =>
-    Array.from({ length: layout.columns }, (_, column) => [
-      column * layout.spacing_x,
-      row * layout.spacing_y
-    ] as [number, number])
-  ).flat();
+  return Array.from({ length: count }, (_, index) => [
+    (index % columns) * spacingX,
+    Math.floor(index / columns) * spacingY
+  ]);
 }
 
 function hexagonalCoordinates(rings: number, spacing: number): Array<[number, number]> {
@@ -438,6 +446,17 @@ function hexagonalCoordinates(rings: number, spacing: number): Array<[number, nu
 
 function hexagonalSiteCount(rings: number): number {
   return 1 + 3 * rings * (rings + 1);
+}
+
+function hexagonalCoordinatesForCount(
+  count: number,
+  spacing: number
+): Array<[number, number]> {
+  let rings = 1;
+  while (hexagonalSiteCount(rings) < count) {
+    rings += 1;
+  }
+  return hexagonalCoordinates(rings, spacing).slice(0, count);
 }
 
 function centerCoordinates(

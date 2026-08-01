@@ -59,7 +59,7 @@ describe('AnalogEditorWidget', () => {
     expect(editor.node.textContent).toContain('Array layout');
   });
 
-  it('applies a parameterized register layout through labeled controls', () => {
+  it('applies a parameterized register layout without changing site count', () => {
     const editor = new AnalogEditorWidget({
       panel: () => null,
       documentId: () => 'document.analog.test'
@@ -85,11 +85,41 @@ describe('AnalogEditorWidget', () => {
       'button[aria-label="Apply atom register layout"]'
     )!.click();
 
-    expect(editor.editorDocument.editor_model.register.sites).toHaveLength(12);
+    expect(editor.editorDocument.editor_model.register.sites).toHaveLength(2);
     expect(editor.editorDocument.editor_model.register.layout_tool).toMatchObject({
       shape: 'rectangle',
       rows: 3,
       columns: 4
+    });
+  });
+
+  it('offers a square layout for the existing sites', () => {
+    const editor = new AnalogEditorWidget({
+      panel: () => null,
+      documentId: () => 'document.analog.test'
+    });
+    document.body.append(editor.node);
+    editor.node.querySelector<HTMLButtonElement>(
+      'button[aria-label="Add register site"]'
+    )!.click();
+    editor.node.querySelector<HTMLButtonElement>(
+      'button[aria-label="Add register site"]'
+    )!.click();
+
+    const shape = editor.node.querySelector<HTMLSelectElement>(
+      'select[aria-label="Register shape"]'
+    )!;
+    shape.value = 'square';
+    shape.dispatchEvent(new Event('change'));
+    editor.node.querySelector<HTMLButtonElement>(
+      'button[aria-label="Apply atom register layout"]'
+    )!.click();
+
+    expect(editor.editorDocument.editor_model.register.sites).toHaveLength(4);
+    expect(editor.editorDocument.editor_model.register.layout_tool).toMatchObject({
+      shape: 'square',
+      rows: 2,
+      columns: 2
     });
   });
 

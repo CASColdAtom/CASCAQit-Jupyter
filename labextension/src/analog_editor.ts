@@ -234,6 +234,7 @@ export class AnalogEditorWidget extends Widget {
     const shapes: Array<[AnalogRegisterShape, string]> = [
       ['custom', 'Custom coordinates'],
       ['line', 'Line'],
+      ['square', 'Square grid'],
       ['rectangle', 'Rectangular grid'],
       ['triangle', 'Triangular lattice'],
       ['ring', 'Ring'],
@@ -275,7 +276,8 @@ export class AnalogEditorWidget extends Widget {
       fields.append(layoutField(label, input));
     };
     if (this.registerTool.shape === 'line') {
-      addNumber('Atoms', 'atom_count', 1, 100, '1');
+      addNumber('Spacing (um)', 'spacing_x', Number.EPSILON);
+    } else if (this.registerTool.shape === 'square') {
       addNumber('Spacing (um)', 'spacing_x', Number.EPSILON);
     } else if (this.registerTool.shape === 'rectangle') {
       addNumber('Rows', 'rows', 1, 20, '1');
@@ -287,10 +289,8 @@ export class AnalogEditorWidget extends Widget {
       addNumber('Columns', 'columns', 1, 20, '1');
       addNumber('Spacing (um)', 'spacing_x', Number.EPSILON);
     } else if (this.registerTool.shape === 'ring') {
-      addNumber('Atoms', 'atom_count', 1, 100, '1');
       addNumber('Radius (um)', 'radius', Number.EPSILON);
     } else if (this.registerTool.shape === 'hexagonal') {
-      addNumber('Rings', 'rings', 1, 5, '1');
       addNumber('Spacing (um)', 'spacing_x', Number.EPSILON);
     }
     if (this.registerTool.shape !== 'custom') {

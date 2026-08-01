@@ -225,7 +225,7 @@
       ],
       "properties": {
         "shape": {
-          "enum": ["custom", "line", "rectangle", "triangle", "ring", "hexagonal"]
+          "enum": ["custom", "line", "square", "rectangle", "triangle", "ring", "hexagonal"]
         },
         "atom_count": { "type": "integer", "minimum": 1, "maximum": 100 },
         "rows": { "type": "integer", "minimum": 1, "maximum": 20 },
@@ -233,7 +233,7 @@
         "spacing_x": { "type": "number", "exclusiveMinimum": 0 },
         "spacing_y": { "type": "number", "exclusiveMinimum": 0 },
         "radius": { "type": "number", "exclusiveMinimum": 0 },
-        "rings": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "rings": { "type": "integer", "minimum": 1, "maximum": 20 },
         "center_x": { "type": "number" },
         "center_y": { "type": "number" }
       }

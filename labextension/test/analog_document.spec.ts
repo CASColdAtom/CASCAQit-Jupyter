@@ -60,12 +60,16 @@ describe('Analog editor document', () => {
 
   it.each([
     ['line', { atom_count: 4, spacing_x: 6 }, 4],
+    ['square', { spacing_x: 6 }, 4],
     ['rectangle', { rows: 2, columns: 3, spacing_x: 5, spacing_y: 7 }, 6],
     ['triangle', { rows: 3, columns: 2, spacing_x: 5 }, 6],
     ['ring', { atom_count: 8, radius: 10 }, 8],
     ['hexagonal', { rings: 2, spacing_x: 5 }, 19]
   ] as const)('generates a deterministic %s register', (shape, update, count) => {
-    const initial = createAnalogDocument(() => 'document.analog.test');
+    let initial = createAnalogDocument(() => 'document.analog.test');
+    for (let index = 2; index < count; index += 1) {
+      initial = addSite(initial, { id: `site-${index}` });
+    }
     const layout = { ...registerLayout(initial), ...update, shape };
     const first = applyRegisterLayout(initial, layout);
     const second = applyRegisterLayout(initial, layout);
@@ -74,13 +78,14 @@ describe('Analog editor document', () => {
       second.editor_model.register.sites
     );
     expect(first.editor_model.register.sites).toHaveLength(count);
-    expect(first.editor_model.register.layout_tool).toEqual(layout);
     expect(new Set(first.editor_model.register.sites.map(site => site.id)).size)
       .toBe(count);
   });
 
   it('centers generated sites and returns to custom after point editing', () => {
-    const initial = createAnalogDocument(() => 'document.analog.test');
+    let initial = createAnalogDocument(() => 'document.analog.test');
+    initial = addSite(initial);
+    initial = addSite(initial);
     const generated = applyRegisterLayout(initial, {
       ...registerLayout(initial),
       shape: 'rectangle',
@@ -125,7 +130,7 @@ describe('Analog editor document', () => {
     });
   });
 
-  it('expands fixed-grid layouts instead of dropping existing sites', () => {
+  it('does not fill unused fixed-grid positions with new sites', () => {
     let document = createAnalogDocument(() => 'document.analog.test');
     for (let index = 2; index < 7; index += 1) {
       document = addSite(document, { id: `site-${index}` });
@@ -138,13 +143,39 @@ describe('Analog editor document', () => {
       columns: 3
     });
 
-    expect(deployed.editor_model.register.sites).toHaveLength(8);
+    expect(deployed.editor_model.register.sites).toHaveLength(7);
     expect(deployed.editor_model.register.layout_tool).toMatchObject({
       rows: 2,
       columns: 4
     });
     expect(deployed.editor_model.register.sites.slice(0, 7).map(site => site.id))
       .toEqual(['s0', 's1', 'site-2', 'site-3', 'site-4', 'site-5', 'site-6']);
+  });
+
+  it('arranges four sites as a centered square without changing membership', () => {
+    let document = createAnalogDocument(() => 'document.analog.test');
+    document = addSite(document, { id: 's2' });
+    document = addSite(document, { id: 's3', occupied: false });
+
+    const deployed = applyRegisterLayout(document, {
+      ...registerLayout(document),
+      shape: 'square',
+      spacing_x: 6,
+      center_x: 10,
+      center_y: -4
+    });
+
+    expect(deployed.editor_model.register.sites).toEqual([
+      { id: 's0', x: 7, y: -7, occupied: true },
+      { id: 's1', x: 13, y: -7, occupied: true },
+      { id: 's2', x: 7, y: -1, occupied: true },
+      { id: 's3', x: 13, y: -1, occupied: false }
+    ]);
+    expect(deployed.editor_model.register.layout_tool).toMatchObject({
+      shape: 'square',
+      rows: 2,
+      columns: 2
+    });
   });
 
   it('preserves sites beyond a layout schema capacity', () => {

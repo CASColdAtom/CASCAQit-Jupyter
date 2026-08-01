@@ -38,22 +38,20 @@ test('compiles, runs, restores, validates, and detaches an Analog program', asyn
   await expect(editor.locator('.cascaqit-AnalogEditor-segment')).toHaveCount(5);
 
   await editor.getByRole('button', { name: 'Add register site' }).click();
-  await expect(editor.locator('.cascaqit-AnalogEditor-site')).toHaveCount(3);
+  await editor.getByRole('button', { name: 'Add register site' }).click();
+  await expect(editor.locator('.cascaqit-AnalogEditor-site')).toHaveCount(4);
   await editor.getByLabel('Site s2 occupied').uncheck();
-  await editor.getByLabel('Register shape').selectOption('line');
-  await editor.getByTestId('apply-register-layout').click();
-  await expect(editor.locator('.cascaqit-AnalogEditor-site')).toHaveCount(3);
-  await expect(editor.getByLabel('Site s2 occupied')).not.toBeChecked();
-
-  await editor.getByLabel('Register shape').selectOption('rectangle');
-  await editor.getByLabel('Rows').fill('2');
-  await editor.getByLabel('Columns').fill('3');
-  await editor.getByLabel('X spacing (um)').fill('5');
-  await editor.getByLabel('Y spacing (um)').fill('6');
+  await editor.getByLabel('Register shape').selectOption('square');
+  await editor.getByLabel('Spacing (um)').fill('5');
   await editor.getByLabel('Center x (um)').fill('0');
   await editor.getByLabel('Center y (um)').fill('0');
   await editor.getByTestId('apply-register-layout').click();
-  await expect(editor.locator('.cascaqit-AnalogEditor-site')).toHaveCount(6);
+  await expect(editor.locator('.cascaqit-AnalogEditor-site')).toHaveCount(4);
+  await expect(editor.getByLabel('Site s2 occupied')).not.toBeChecked();
+  await mkdir('artifacts/screenshots', { recursive: true });
+  await editor.screenshot({
+    path: `artifacts/screenshots/${testInfo.project.name}-analog-square.png`
+  });
   await expect(editor.getByTestId('analog-waveform-preview').locator('canvas').first())
     .toBeVisible();
   await expect(editor.getByTestId('analog-waveform-preview'))
@@ -70,6 +68,25 @@ test('compiles, runs, restores, validates, and detaches an Analog program', asyn
     .filter({ hasText: 'MockNeutralAtomTarget' })
     .first();
   await expect(generated).toContainText('AHSProgram');
+  await expect(generated).toContainText('((-2.5, -2.5), (2.5, -2.5)');
+
+  await editor.getByLabel('Register shape').selectOption('rectangle');
+  await editor.getByLabel('Rows').fill('2');
+  await editor.getByLabel('Columns').fill('3');
+  await editor.getByLabel('X spacing (um)').fill('5');
+  await editor.getByLabel('Y spacing (um)').fill('6');
+  await editor.getByLabel('Center x (um)').fill('10');
+  await editor.getByLabel('Center y (um)').fill('0');
+  await editor.getByTestId('apply-register-layout').click();
+  await expect(editor.locator('.cascaqit-AnalogEditor-site')).toHaveCount(4);
+  await expect(editor.getByTestId('generate-analog-cell')).toHaveText('Update cell');
+  await editor.getByTestId('generate-analog-cell').click();
+  await expect(editor.getByTestId('analog-editor-status')).toHaveText('Ready');
+  await expect(
+    page.locator('.jp-CodeCell').filter({ hasText: 'MockNeutralAtomTarget' })
+  ).toHaveCount(1);
+  await expect(generated).toContainText('((5.0, -3.0), (10.0, -3.0)');
+  await expect(generated).not.toContainText('((-2.5, -2.5), (2.5, -2.5)');
 
   await editor.getByLabel('Shots').fill('32');
   await editor.getByLabel('Seed').fill('2026');
@@ -104,7 +121,6 @@ test('compiles, runs, restores, validates, and detaches an Analog program', asyn
   expect(secondJobId).not.toBe(firstJobId);
 
   await result.evaluate(node => node.scrollIntoView({ block: 'center' }));
-  await mkdir('artifacts/screenshots', { recursive: true });
   await editor.screenshot({
     path: `artifacts/screenshots/${testInfo.project.name}-analog-job.png`
   });
