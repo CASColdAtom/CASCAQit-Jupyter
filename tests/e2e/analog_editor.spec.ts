@@ -68,7 +68,8 @@ test('compiles, runs, restores, validates, and detaches an Analog program', asyn
     .filter({ hasText: 'MockNeutralAtomTarget' })
     .first();
   await expect(generated).toContainText('AHSProgram');
-  await expect(generated).toContainText('((-2.5, -2.5), (2.5, -2.5)');
+  await expect(generated).toContainText('AtomRegister.square');
+  await expect(generated).toContainText('times=[0.0, 0.4, 0.8, 1.2]');
 
   await editor.getByLabel('Register shape').selectOption('rectangle');
   await editor.getByLabel('Rows').fill('2');
@@ -85,8 +86,8 @@ test('compiles, runs, restores, validates, and detaches an Analog program', asyn
   await expect(
     page.locator('.jp-CodeCell').filter({ hasText: 'MockNeutralAtomTarget' })
   ).toHaveCount(1);
-  await expect(generated).toContainText('((5.0, -3.0), (10.0, -3.0)');
-  await expect(generated).not.toContainText('((-2.5, -2.5), (2.5, -2.5)');
+  await expect(generated).toContainText('AtomRegister.rectangular');
+  await expect(generated).not.toContainText('AtomRegister.square');
 
   await editor.getByLabel('Shots').fill('32');
   await editor.getByLabel('Seed').fill('2026');

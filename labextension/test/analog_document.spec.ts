@@ -178,6 +178,36 @@ describe('Analog editor document', () => {
     });
   });
 
+  it('uses CASCAQit triangular row semantics with bounded coordinates', () => {
+    let document = createAnalogDocument(() => 'document.analog.test');
+    for (let index = 2; index < 6; index += 1) {
+      document = addSite(document, { id: `s${index}` });
+    }
+
+    const deployed = applyRegisterLayout(document, {
+      ...registerLayout(document),
+      shape: 'triangle',
+      spacing_x: 5,
+      center_x: 5,
+      center_y: 4.330127
+    });
+
+    expect(deployed.editor_model.register.sites.map(({ x, y }) => [x, y]))
+      .toEqual([
+        [0, 0],
+        [0, 4.330127],
+        [5, 4.330127],
+        [0, 8.660254],
+        [5, 8.660254],
+        [10, 8.660254]
+      ]);
+    expect(deployed.editor_model.register.layout_tool).toMatchObject({
+      shape: 'triangle',
+      rows: 3,
+      columns: 3
+    });
+  });
+
   it('preserves sites beyond a layout schema capacity', () => {
     let document = createAnalogDocument(() => 'document.analog.test');
     for (let index = 2; index < 101; index += 1) {

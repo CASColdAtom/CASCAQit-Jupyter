@@ -16,6 +16,7 @@ from cascaqit_jupyter.compile import build_cell_metadata, source_hash
 from cascaqit_jupyter.editor_ir import EditorDocumentIR
 
 TARGET_SHOTS = 100
+DERIVED_DECIMAL_PLACES = 6
 
 
 @dataclass(frozen=True)
@@ -53,6 +54,19 @@ class AnalogCompileResult:
             "detached": self.detached,
             "diagnostics": [item.to_dict() for item in self.diagnostics],
         }
+
+
+@dataclass(frozen=True)
+class _RegisterFactory:
+    """One public AtomRegister shape call that reproduces editor coordinates."""
+
+    shape: str
+    count: int
+    rows: int
+    columns: int
+    spacing_x: float
+    spacing_y: float
+    origin: tuple[float, float]
 
 
 def compile_analog_document(
@@ -99,9 +113,9 @@ def compile_analog_document(
 
     model = document.editor_model
     sites = _sites(model)
+    register_factory = _register_factory(model, sites)
     channels = {
-        channel: _channel(model, channel)
-        for channel in ("rabi", "detuning", "phase")
+        channel: _channel(model, channel) for channel in ("rabi", "detuning", "phase")
     }
     durations = {channel: values[0][-1] for channel, values in channels.items()}
     if not math.isclose(
@@ -124,9 +138,19 @@ def compile_analog_document(
         )
 
     program_id = _program_id(document.document_id)
-    source = _generate_source(sites=sites, channels=channels, program_id=program_id)
+    source = _generate_source(
+        sites=sites,
+        channels=channels,
+        program_id=program_id,
+        register_factory=register_factory,
+    )
     try:
-        builder = _build_program(sites=sites, channels=channels, program_id=program_id)
+        builder = _build_program(
+            sites=sites,
+            channels=channels,
+            program_id=program_id,
+            register_factory=register_factory,
+        )
         program = builder.to_ir()
         validation = builder.validate(MockNeutralAtomTarget.v0_1(), shots=TARGET_SHOTS)
     except CASCAQitError as exc:
@@ -243,7 +267,7 @@ def _channel(
                 object_path=f"editor_model.controls.{channel}.segments[{index}]",
                 suggestion="Match this segment start to the previous segment end.",
             )
-        times.append(times[-1] + duration)
+        times.append(_round_derived(times[-1] + duration))
         values.append(end)
         previous_end = end
     return tuple(times), tuple(values)
@@ -254,10 +278,18 @@ def _build_program(
     sites: tuple[dict[str, Any], ...],
     channels: dict[str, tuple[tuple[float, ...], tuple[float, ...]]],
     program_id: str,
+    register_factory: _RegisterFactory | None,
 ) -> AHSProgram:
     site_ids = tuple(str(item["id"]) for item in sites)
+    positions = tuple((float(item["x"]), float(item["y"])) for item in sites)
+    if register_factory is not None:
+        shaped = _build_shape_register(register_factory)
+        positions = tuple(
+            (_round_derived(site.position[0]), _round_derived(site.position[1]))
+            for site in shaped.sites[: len(sites)]
+        )
     register = AtomRegister.custom(
-        tuple((float(item["x"]), float(item["y"])) for item in sites),
+        positions,
         site_ids=site_ids,
         atom_ids=site_ids,
     )
@@ -294,6 +326,7 @@ def _generate_source(
     sites: tuple[dict[str, Any], ...],
     channels: dict[str, tuple[tuple[float, ...], tuple[float, ...]]],
     program_id: str,
+    register_factory: _RegisterFactory | None,
 ) -> str:
     site_ids = [str(item["id"]) for item in sites]
     positions = [[float(item["x"]), float(item["y"])] for item in sites]
@@ -303,20 +336,44 @@ def _generate_source(
             "MockNeutralAtomTarget, Waveform"
         ),
         "",
-        "register = AtomRegister.custom(",
-        f"    {_position_literal(positions)},",
-        f"    site_ids={_literal(site_ids)},",
-        f"    atom_ids={_literal(site_ids)},",
-        ")",
     ]
+    if register_factory is None:
+        lines.extend(
+            [
+                "register = AtomRegister.custom(",
+                f"    {_position_literal(positions)},",
+            ]
+        )
+    else:
+        lines.extend(_shape_register_source(register_factory))
+        lines.extend(
+            [
+                "layout_positions = tuple(",
+                (
+                    f"    (round(site.position[0], {DERIVED_DECIMAL_PLACES}), "
+                    f"round(site.position[1], {DERIVED_DECIMAL_PLACES}))"
+                ),
+                f"    for site in layout_register.sites[:{len(sites)}]",
+                ")",
+                "register = AtomRegister.custom(",
+                "    layout_positions,",
+            ]
+        )
+    lines.extend(
+        [
+            f"    site_ids={_literal(site_ids)},",
+            f"    atom_ids={_literal(site_ids)},",
+            ")",
+        ]
+    )
     for index, site in enumerate(sites):
         if site["occupied"] is not True:
             lines.extend(
                 [
                     "register = register.with_site_status(",
-                    f"    {_literal(site['id'])}, status=\"vacant\",",
-                    "    lifecycle_stage=\"planned\",",
-                    f"    snapshot_id=\"register.editor.vacant.{index}\",",
+                    f'    {_literal(site["id"])}, status="vacant",',
+                    '    lifecycle_stage="planned",',
+                    f'    snapshot_id="register.editor.vacant.{index}",',
                     ")",
                 ]
             )
@@ -348,6 +405,108 @@ def _generate_source(
     return "\n".join(lines)
 
 
+def _register_factory(
+    model: dict[str, Any], sites: tuple[dict[str, Any], ...]
+) -> _RegisterFactory | None:
+    register = model.get("register")
+    assert isinstance(register, dict)
+    layout = register.get("layout_tool")
+    if not isinstance(layout, dict):
+        return None
+    shape = layout.get("shape")
+    if shape not in ("line", "square", "rectangle", "triangle"):
+        return None
+    count = len(sites)
+    factory = _RegisterFactory(
+        shape=str(shape),
+        count=count,
+        rows=int(layout["rows"]),
+        columns=int(layout["columns"]),
+        spacing_x=float(layout["spacing_x"]),
+        spacing_y=float(layout["spacing_y"]),
+        origin=(float(sites[0]["x"]), float(sites[0]["y"])),
+    )
+    shaped = _build_shape_register(factory)
+    if len(shaped.sites) < count:
+        return None
+    for source, generated in zip(sites, shaped.sites):
+        expected = (float(source["x"]), float(source["y"]))
+        if not all(
+            math.isclose(actual, target, rel_tol=0.0, abs_tol=1e-6)
+            for actual, target in zip(generated.position, expected)
+        ):
+            return None
+    return factory
+
+
+def _build_shape_register(factory: _RegisterFactory) -> AtomRegister:
+    if factory.shape == "line":
+        return AtomRegister.line(
+            count=factory.count,
+            spacing=factory.spacing_x,
+            origin=factory.origin,
+        )
+    if factory.shape == "square":
+        return AtomRegister.square(
+            side=factory.columns,
+            spacing=factory.spacing_x,
+            origin=factory.origin,
+        )
+    if factory.shape == "rectangle":
+        return AtomRegister.rectangular(
+            rows=factory.rows,
+            columns=factory.columns,
+            spacing_x=factory.spacing_x,
+            spacing_y=factory.spacing_y,
+            origin=factory.origin,
+        )
+    if factory.shape == "triangle":
+        return AtomRegister.triangular(
+            rows=factory.rows,
+            spacing=factory.spacing_x,
+            origin=factory.origin,
+        )
+    raise ValueError(f"Unsupported AtomRegister factory shape: {factory.shape!r}.")
+
+
+def _shape_register_source(factory: _RegisterFactory) -> list[str]:
+    origin = f"({factory.origin[0]!r}, {factory.origin[1]!r})"
+    if factory.shape == "line":
+        arguments = [
+            f"    count={factory.count},",
+            f"    spacing={factory.spacing_x!r},",
+        ]
+        method = "line"
+    elif factory.shape == "square":
+        arguments = [
+            f"    side={factory.columns},",
+            f"    spacing={factory.spacing_x!r},",
+        ]
+        method = "square"
+    elif factory.shape == "rectangle":
+        arguments = [
+            f"    rows={factory.rows},",
+            f"    columns={factory.columns},",
+            f"    spacing_x={factory.spacing_x!r},",
+            f"    spacing_y={factory.spacing_y!r},",
+        ]
+        method = "rectangular"
+    elif factory.shape == "triangle":
+        arguments = [
+            f"    rows={factory.rows},",
+            f"    spacing={factory.spacing_x!r},",
+        ]
+        method = "triangular"
+    else:
+        raise ValueError(f"Unsupported AtomRegister factory shape: {factory.shape!r}.")
+    return [
+        f"layout_register = AtomRegister.{method}(",
+        *arguments,
+        f"    origin={origin},",
+        ")",
+    ]
+
+
 def _map_diagnostic(diagnostic: DiagnosticsIR) -> DiagnosticsIR:
     path = diagnostic.object_path
     if path is not None:
@@ -377,6 +536,11 @@ def _map_diagnostic(diagnostic: DiagnosticsIR) -> DiagnosticsIR:
 
 def _literal(value: object) -> str:
     return json.dumps(value, ensure_ascii=True, sort_keys=True, separators=(", ", ": "))
+
+
+def _round_derived(value: float) -> float:
+    rounded = round(value, DERIVED_DECIMAL_PLACES)
+    return 0.0 if rounded == 0 else rounded
 
 
 def _position_literal(positions: list[list[float]]) -> str:

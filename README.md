@@ -74,9 +74,9 @@ display(display_visualization(build_counts_histogram(result)))
 
 ## 可视化编辑 Analog 程序
 
-在工具栏选择 **Analog**，在命令面板运行 `CASCAQit: Open Analog Editor`，或按 `Alt+Shift+A`。编辑器支持逐点坐标以及直线、正方形、矩形、三角晶格、环形和六角晶格排列，可设置行列边界、中心、半径和间距；生成后仍可逐点调整占据状态与坐标。分段线性的全局 Rabi、detuning 和 phase 控制叠加显示在同一个离线 Bokeh 坐标轴中，并支持末端 ground/Rydberg 测量。
+在工具栏选择 **Analog**，在命令面板运行 `CASCAQit: Open Analog Editor`，或按 `Alt+Shift+A`。编辑器支持逐点坐标以及直线、正方形、矩形、三角晶格、环形和六角晶格排列，可设置行列边界、中心、半径和间距；生成后仍可逐点调整占据状态与坐标。直线、正方形、矩形和三角形通过 CASCAQit 已发布的 `AtomRegister.line/square/rectangular/triangular` 形状 API 生成坐标；环形、六角形和手工坐标使用 `AtomRegister.custom`。分段线性的全局 Rabi、detuning 和 phase 控制叠加显示在同一个离线 Bokeh 坐标轴中，并支持末端 ground/Rydberg 测量。
 
-只有 **Add site** 和对应行的 **Remove** 会改变原子数量。重新应用任意排列只会为现有 site 计算新坐标，并保留每个 site 的 ID 和占据状态；矩形或三角形的行列容量大于 site 数量时不会补满网格。修改布局后，**Update cell** 会更新同一个 generated Cell 的坐标代码。
+只有 **Add site** 和对应行的 **Remove** 会改变原子数量。重新应用任意排列只会为现有 site 计算新坐标，并保留每个 site 的 ID 和占据状态；布局容量大于 site 数量时不会补满网格。形状生成的坐标与 waveform 累计时间统一保留最多 6 位小数。修改布局后，**Update cell** 会更新同一个 generated Cell 的代码。
 
 三个控制通道必须具有相同总时长，相邻分段必须连续。编译使用 CASCAQit 已发布的 `AtomRegister`、`Waveform`、`AHSProgram` 和离线 `MockNeutralAtomTarget` 公开 API。校验失败时，编辑器会保留 CASCAQit 的诊断代码、对象路径、消息和修改建议，并标记对应的寄存器、波形或测量控件。[`examples/analog_editor.ipynb`](examples/analog_editor.ipynb) 提供了一个两站点示例。
 

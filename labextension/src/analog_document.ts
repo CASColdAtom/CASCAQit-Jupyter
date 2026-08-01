@@ -1,6 +1,7 @@
 import type { CompileStatus, DocumentIdFactory } from './digital_document';
 
 export type AnalogChannel = 'rabi' | 'detuning' | 'phase';
+export const ANALOG_DERIVED_DECIMAL_PLACES = 6;
 export type AnalogRegisterShape =
   | 'custom'
   | 'line'
@@ -328,7 +329,7 @@ function layoutForSiteCount(
     fitted.columns = Math.min(20, Math.ceil(Math.sqrt(siteCount)));
     fitted.rows = Math.min(20, Math.ceil(siteCount / fitted.columns));
     fitted.spacing_y = fitted.spacing_x;
-  } else if (fitted.shape === 'rectangle' || fitted.shape === 'triangle') {
+  } else if (fitted.shape === 'rectangle') {
     if (fitted.rows * fitted.columns < siteCount) {
       fitted.columns = Math.min(
         20,
@@ -341,6 +342,10 @@ function layoutForSiteCount(
         Math.max(fitted.rows, Math.ceil(siteCount / fitted.columns))
       );
     }
+  } else if (fitted.shape === 'triangle') {
+    fitted.rows = Math.min(20, triangularRowsForCount(siteCount));
+    fitted.columns = fitted.rows;
+    fitted.spacing_y = fitted.spacing_x * Math.sqrt(3) / 2;
   } else if (fitted.shape === 'hexagonal') {
     fitted.rings = 1;
     while (fitted.rings < 20 && hexagonalSiteCount(fitted.rings) < siteCount) {
@@ -380,14 +385,10 @@ function sitesForLayout(
       );
       break;
     case 'triangle':
-      coordinates = Array.from({ length: siteCount }, (_, index) => {
-        const row = Math.floor(index / layout.columns);
-        const column = index % layout.columns;
-        return [
-          (column + (row % 2) / 2) * layout.spacing_x,
-          row * layout.spacing_x * Math.sqrt(3) / 2
-        ];
-      });
+      coordinates = triangularCoordinatesForCount(
+        siteCount,
+        layout.spacing_x
+      );
       break;
     case 'ring':
       coordinates = Array.from({ length: siteCount }, (_, index) => {
@@ -407,8 +408,8 @@ function sitesForLayout(
   const centered = centerCoordinates(coordinates, layout.center_x, layout.center_y);
   return centered.map(([x, y], index) => ({
     ...existingSites[index],
-    x: rounded(x),
-    y: rounded(y)
+    x: roundAnalogDerived(x),
+    y: roundAnalogDerived(y)
   }));
 }
 
@@ -422,6 +423,28 @@ function rectangularCoordinates(
     (index % columns) * spacingX,
     Math.floor(index / columns) * spacingY
   ]);
+}
+
+function triangularRowsForCount(count: number): number {
+  return Math.ceil((Math.sqrt(8 * count + 1) - 1) / 2);
+}
+
+function triangularCoordinatesForCount(
+  count: number,
+  spacing: number
+): Array<[number, number]> {
+  const coordinates: Array<[number, number]> = [];
+  const verticalSpacing = Math.sqrt(3) * spacing / 2;
+  for (let row = 0; coordinates.length < count; row += 1) {
+    for (
+      let column = 0;
+      column <= row && coordinates.length < count;
+      column += 1
+    ) {
+      coordinates.push([column * spacing, row * verticalSpacing]);
+    }
+  }
+  return coordinates;
 }
 
 function hexagonalCoordinates(rings: number, spacing: number): Array<[number, number]> {
@@ -498,8 +521,9 @@ function finite(value: number, fallback: number): number {
   return Number.isFinite(value) ? value : fallback;
 }
 
-function rounded(value: number): number {
-  return Number(value.toFixed(12));
+export function roundAnalogDerived(value: number): number {
+  const rounded = Number(value.toFixed(ANALOG_DERIVED_DECIMAL_PLACES));
+  return Object.is(rounded, -0) ? 0 : rounded;
 }
 
 function nextId(existing: Set<string>, prefix: string): string {

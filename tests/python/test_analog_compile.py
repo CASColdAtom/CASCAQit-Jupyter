@@ -33,6 +33,102 @@ def test_two_site_document_compiles_to_deterministic_validated_source() -> None:
     assert namespace["program"].stable_hash() == first.program_hash
     diagnostics = namespace["validation"].diagnostics
     assert not any(item.severity == "error" for item in diagnostics)
+    assert "times=[0.0, 0.4, 0.8, 1.2]" in first.generated_source
+    assert "1.2000000000000002" not in first.generated_source
+
+
+@pytest.mark.parametrize(
+    ("shape", "method", "layout_update", "positions"),
+    [
+        ("line", "line", {}, ((0.0, 0.0), (5.0, 0.0))),
+        (
+            "square",
+            "square",
+            {"rows": 2, "columns": 2},
+            ((0.0, 0.0), (5.0, 0.0), (0.0, 5.0), (5.0, 5.0)),
+        ),
+        (
+            "rectangle",
+            "rectangular",
+            {"rows": 2, "columns": 3, "spacing_y": 6.0},
+            ((0.0, 0.0), (5.0, 0.0), (10.0, 0.0), (0.0, 6.0)),
+        ),
+        (
+            "triangle",
+            "triangular",
+            {"rows": 3, "columns": 3},
+            (
+                (0.0, 0.0),
+                (0.0, 4.330127),
+                (5.0, 4.330127),
+                (0.0, 8.660254),
+                (5.0, 8.660254),
+                (10.0, 8.660254),
+            ),
+        ),
+    ],
+)
+def test_fixed_layouts_compile_through_public_atom_register_factories(
+    shape: str,
+    method: str,
+    layout_update: dict[str, Any],
+    positions: tuple[tuple[float, float], ...],
+) -> None:
+    raw = analog_document()
+    raw["editor_model"]["register"]["sites"] = [
+        {"id": f"s{index}", "x": x, "y": y, "occupied": True}
+        for index, (x, y) in enumerate(positions)
+    ]
+    layout = {
+        "shape": shape,
+        "atom_count": len(positions),
+        "rows": 1,
+        "columns": len(positions),
+        "spacing_x": 5.0,
+        "spacing_y": 5.0,
+        "radius": 8.0,
+        "rings": 1,
+        "center_x": 0.0,
+        "center_y": 0.0,
+        **layout_update,
+    }
+    raw["editor_model"]["register"]["layout_tool"] = layout
+
+    result = compile_analog_document(EditorDocumentIR.from_dict(raw))
+
+    assert result.generated_source is not None
+    assert f"AtomRegister.{method}(" in result.generated_source
+    assert "layout_positions = tuple(" in result.generated_source
+    assert result.program is not None
+    assert [site.site_id for site in result.program.register.sites] == [
+        f"s{index}" for index in range(len(positions))
+    ]
+    assert [site.position for site in result.program.register.sites] == list(positions)
+    namespace: dict[str, Any] = {}
+    exec(result.generated_source, namespace)  # noqa: S102 - generated source contract
+    assert namespace["program"].stable_hash() == result.program_hash
+
+
+def test_mismatched_layout_metadata_falls_back_to_explicit_coordinates() -> None:
+    raw = analog_document()
+    raw["editor_model"]["register"]["layout_tool"] = {
+        "shape": "line",
+        "atom_count": 2,
+        "rows": 1,
+        "columns": 2,
+        "spacing_x": 6.0,
+        "spacing_y": 5.0,
+        "radius": 8.0,
+        "rings": 1,
+        "center_x": 2.5,
+        "center_y": 0.0,
+    }
+
+    result = compile_analog_document(EditorDocumentIR.from_dict(raw))
+
+    assert result.generated_source is not None
+    assert "AtomRegister.line(" not in result.generated_source
+    assert "register = AtomRegister.custom(" in result.generated_source
 
 
 @pytest.mark.parametrize(
@@ -60,9 +156,7 @@ def test_two_site_document_compiles_to_deterministic_validated_source() -> None:
             "editor_model.controls",
         ),
         (
-            lambda raw: raw["editor_model"]["measurement"].update(
-                {"enabled": False}
-            ),
+            lambda raw: raw["editor_model"]["measurement"].update({"enabled": False}),
             "EDITOR_ANALOG_MEASUREMENT_REQUIRED",
             "editor_model.measurement.enabled",
         ),

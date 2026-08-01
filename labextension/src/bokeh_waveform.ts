@@ -1,4 +1,8 @@
-import type { AnalogChannel, AnalogSegment } from './analog_document';
+import {
+  roundAnalogDerived,
+  type AnalogChannel,
+  type AnalogSegment
+} from './analog_document';
 
 export interface BokehWaveformChannel {
   channel: AnalogChannel;
@@ -96,7 +100,7 @@ export async function renderBokehWaveforms(
   }
 }
 
-function waveformPoints(
+export function waveformPoints(
   segments: AnalogSegment[]
 ): Array<{ time: number; value: number }> {
   if (segments.length === 0) {
@@ -105,7 +109,9 @@ function waveformPoints(
   const points = [{ time: 0, value: segments[0].start_value }];
   for (const segment of segments) {
     points.push({
-      time: points.at(-1)!.time + Math.max(segment.duration, 0),
+      time: roundAnalogDerived(
+        points.at(-1)!.time + Math.max(segment.duration, 0)
+      ),
       value: segment.end_value
     });
   }

@@ -285,8 +285,6 @@ export class AnalogEditorWidget extends Widget {
       addNumber('X spacing (um)', 'spacing_x', Number.EPSILON);
       addNumber('Y spacing (um)', 'spacing_y', Number.EPSILON);
     } else if (this.registerTool.shape === 'triangle') {
-      addNumber('Rows', 'rows', 1, 20, '1');
-      addNumber('Columns', 'columns', 1, 20, '1');
       addNumber('Spacing (um)', 'spacing_x', Number.EPSILON);
     } else if (this.registerTool.shape === 'ring') {
       addNumber('Radius (um)', 'radius', Number.EPSILON);
