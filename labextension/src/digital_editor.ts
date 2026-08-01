@@ -529,6 +529,18 @@ export class DigitalEditorWidget extends Widget {
     } finally {
       this.busy = false;
       this.render();
+      if (this.document.compile_status === 'invalid') {
+        this.revealDiagnostics();
+      }
+    }
+  }
+
+  private revealDiagnostics(): void {
+    const region = this.node.querySelector<HTMLElement>(
+      '[data-testid="editor-diagnostics"]'
+    );
+    if (region !== null && typeof region.scrollIntoView === 'function') {
+      region.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     }
   }
 
