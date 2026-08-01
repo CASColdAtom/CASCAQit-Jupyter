@@ -1,6 +1,6 @@
 {
   "name": "@cascaqit/jupyter",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-alpha.2",
   "description": "CASCAQit visual editors and safe MIME renderers for JupyterLab 4 and Notebook 7",
   "license": "Apache-2.0",
   "private": true,

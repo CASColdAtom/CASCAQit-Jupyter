@@ -24,12 +24,12 @@ jupyter server list
 
 CASCAQit-Jupyter 以 wheel（Python 安装包）和 CASCAQit 一起分发。wheel 同时包含 Python companion 和 JupyterLab 预构建扩展，使用者不需要克隆本仓库，也不需要安装 Node.js。
 
-先从对应 GitHub Release 下载两个 wheel，再安装 Jupyter 运行环境。以下文件名以 `0.1.0a1` 和 CASCAQit `1.0.5a0` 为例：
+先从对应 GitHub Release 下载两个 wheel，再安装 Jupyter 运行环境。以下文件名以 `0.1.0a2` 和 CASCAQit `1.0.5a0` 为例：
 
 ```console
 python -m pip install \
   ./wheelhouse/cascaqit-1.0.5a0-py3-none-any.whl \
-  ./wheelhouse/cascaqit_jupyter-0.1.0a1-py3-none-any.whl \
+  ./wheelhouse/cascaqit_jupyter-0.1.0a2-py3-none-any.whl \
   "jupyterlab>=4,<5" \
   "notebook>=7,<8"
 jupyter labextension list
@@ -41,7 +41,7 @@ jupyter labextension list
 jupyter lab
 ```
 
-维护者推送与 `pyproject.toml` 版本一致的标签（例如 `v0.1.0a1`）后，`Release Wheel` workflow 会执行前端类型检查和测试，构建 wheel，检查 Python 包和预构建扩展是否都已写入 wheel，并把 wheel 与 `SHA256SUMS` 上传到对应 GitHub Release。也可以在 GitHub Actions 页面手动运行该 workflow，但输入的标签必须已经存在且与项目版本一致。
+维护者推送与 `pyproject.toml` 版本一致的标签（例如 `v0.1.0a2`）后，`Release Wheel` workflow 会执行前端类型检查和测试、依赖漏洞审计和 Python companion 检查，构建 wheel，检查 Python 包和预构建扩展是否都已写入 wheel，并把 wheel 与 `SHA256SUMS` 上传到对应 GitHub Release。也可以在 GitHub Actions 页面手动运行该 workflow，但输入的标签必须已经存在且与项目版本一致。
 
 ## 显示程序和结果
 

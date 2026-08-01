@@ -8,7 +8,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "cascaqit-jupyter"
-version = "0.1.0a1"
+version = "0.1.0a2"
 description = "JupyterLab 4 and Notebook 7 integration for CASCAQit"
 readme = "README.md"
 requires-python = ">=3.9,<3.14"
