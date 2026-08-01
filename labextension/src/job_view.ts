@@ -5,6 +5,7 @@ export interface JobViewOptions {
   state: JobViewState;
   active: boolean;
   canRun: boolean;
+  runLabel?: string;
   shots: number;
   seed: number;
   analogTimeSteps?: number;
@@ -59,7 +60,8 @@ export function renderJobView(options: JobViewOptions): HTMLElement {
   }
 
   const actions = element('div', 'cascaqit-Job-actions');
-  const run = commandButton('Run', 'Run with local CASCAQit backend');
+  const runLabel = options.runLabel ?? 'Run';
+  const run = commandButton(runLabel, `${runLabel} with local CASCAQit backend`);
   run.dataset.testid = 'run-job';
   run.disabled = !options.canRun || options.active;
   run.addEventListener('click', options.onRun);

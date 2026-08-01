@@ -128,6 +128,48 @@ describe('JobController', () => {
     });
     expect(controller.active).toBe(false);
   });
+
+  it('invalidates the previous result when the editor document changes', async () => {
+    let document = readyDocument();
+    const callbacks: Array<() => void> = [];
+    const changed = vi.fn();
+    const cancelSchedule = vi.fn();
+    const controller = new JobController({
+      panel: () => panel(),
+      document: () => document,
+      acceptDocument: value => {
+        document = value as typeof document;
+      },
+      changed,
+      bridge: {
+        context: vi.fn(() => ({ cellId: 'cell-1', source: 'source' })),
+        applyMetadata: vi.fn()
+      } as unknown as NotebookBridge,
+      client: {
+        connect: vi.fn(async () => undefined),
+        request: vi.fn(async () => response(jobPayload(document, 'running')))
+      } as unknown as KernelClient,
+      schedule: callback => {
+        callbacks.push(callback);
+        return 1 as unknown as ReturnType<typeof setTimeout>;
+      },
+      cancelSchedule
+    });
+    await controller.start({ shots: 32, seed: 2026 });
+    expect(controller.active).toBe(true);
+
+    controller.markDocumentChanged();
+
+    expect(controller.active).toBe(false);
+    expect(controller.view).toMatchObject({
+      state: null,
+      jobId: null,
+      resultMime: null,
+      message: 'Program changed; synchronize the generated cell before running.'
+    });
+    expect(cancelSchedule).toHaveBeenCalledOnce();
+    expect(changed).toHaveBeenCalled();
+  });
 });
 
 function readyDocument(): DigitalEditorDocument {

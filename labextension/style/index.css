@@ -17,7 +17,7 @@
   box-sizing: border-box;
   width: 100%;
   min-width: clamp(280px, 68vw, 1080px);
-  max-width: 100%;
+  max-width: none;
   height: 100%;
   overflow: auto;
   background: var(--jp-layout-color1, #fff);
@@ -27,15 +27,52 @@
   font-family: var(--jp-ui-font-family, system-ui, sans-serif);
 }
 
+.cascaqit-Editor.is-resizable {
+  min-width: 280px;
+}
+
 .cascaqit-Editor *,
 .cascaqit-Editor *::before,
 .cascaqit-Editor *::after {
   box-sizing: border-box;
 }
 
+#jp-left-stack.cascaqit-EditorHost,
 #jp-left-stack:has(.cascaqit-Editor) {
   width: clamp(280px, 68vw, 1080px);
   min-width: clamp(280px, 68vw, 1080px);
+}
+
+.cascaqit-EditorHost {
+  width: clamp(280px, 68vw, 1080px);
+  min-width: clamp(280px, 68vw, 1080px);
+}
+
+.cascaqit-EditorHost > .cascaqit-Editor {
+  min-width: clamp(280px, 68vw, 1080px);
+}
+
+#jp-left-stack.cascaqit-EditorHost > .cascaqit-Editor {
+  min-width: clamp(280px, 68vw, 1080px);
+}
+
+#jp-left-stack.cascaqit-EditorHost:has(.cascaqit-Editor.is-resizable),
+#jp-left-stack:has(.cascaqit-Editor.is-resizable) {
+  width: auto;
+  min-width: 280px;
+}
+
+#jp-left-stack.cascaqit-EditorHost > .cascaqit-Editor.is-resizable {
+  min-width: 280px;
+}
+
+.cascaqit-EditorHost:has(.cascaqit-Editor.is-resizable) {
+  width: auto;
+  min-width: 280px;
+}
+
+.cascaqit-EditorHost > .cascaqit-Editor.is-resizable {
+  min-width: 280px;
 }
 
 .cascaqit-Editor-header {
@@ -214,6 +251,12 @@
   color: var(--jp-ui-font-color2, #5f6368);
   font-size: 12px;
   line-height: 17px;
+}
+
+.cascaqit-Editor-message.is-invalid {
+  border-left: 3px solid #9a5b00;
+  background: #fff7e6;
+  color: #5f3800;
 }
 
 .cascaqit-Editor-preview {
@@ -558,9 +601,20 @@
 
 @media (max-width: 900px) {
   .cascaqit-Editor,
+  .cascaqit-EditorHost,
+  #jp-left-stack.cascaqit-EditorHost,
   #jp-left-stack:has(.cascaqit-Editor) {
     width: min(58vw, 420px);
     min-width: min(58vw, 420px);
+  }
+
+  .cascaqit-Editor.is-resizable,
+  .cascaqit-EditorHost:has(.cascaqit-Editor.is-resizable),
+  .cascaqit-EditorHost > .cascaqit-Editor.is-resizable,
+  #jp-left-stack.cascaqit-EditorHost:has(.cascaqit-Editor.is-resizable),
+  #jp-left-stack:has(.cascaqit-Editor.is-resizable),
+  #jp-left-stack.cascaqit-EditorHost > .cascaqit-Editor.is-resizable {
+    min-width: 280px;
   }
 }
 

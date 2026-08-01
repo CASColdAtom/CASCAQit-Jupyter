@@ -1,6 +1,8 @@
 import { JupyterFrontEnd, JupyterFrontEndPlugin } from '@jupyterlab/application';
 import { ICommandPalette, ToolbarButton } from '@jupyterlab/apputils';
 import { INotebookTracker, NotebookPanel } from '@jupyterlab/notebook';
+import { MessageLoop } from '@lumino/messaging';
+import { SplitPanel, Widget } from '@lumino/widgets';
 
 import '../labextension/style/index.css';
 import { AnalogEditorWidget } from './analog_editor';
@@ -23,43 +25,32 @@ const plugin: JupyterFrontEndPlugin<void> = {
     let analogEditor: AnalogEditorWidget | null = null;
     const addEditorToWorkspace = (
       editor: DigitalEditorWidget | AnalogEditorWidget,
-      peer: DigitalEditorWidget | AnalogEditorWidget | null,
       rank: number
     ): void => {
-      if (app.name === 'Jupyter Notebook') {
-        app.shell.add(editor, 'left', { rank });
-        return;
-      }
-      const livePeer = peer !== null && !peer.isDisposed ? peer : null;
-      const reference = livePeer?.id ?? notebooks.currentWidget?.id;
-      if (reference === undefined) {
-        app.shell.add(editor, 'main');
-        return;
-      }
-      app.shell.add(editor, 'main', {
-        mode: livePeer === null ? 'split-left' : 'tab-after',
-        ref: reference
-      });
+      app.shell.add(editor, 'left', { rank });
+      editor.parent?.addClass('cascaqit-EditorHost');
     };
     const openDigital = async (): Promise<void> => {
       if (digitalEditor === null || digitalEditor.isDisposed) {
         digitalEditor = new DigitalEditorWidget({
           panel: () => notebooks.currentWidget
         });
-        addEditorToWorkspace(digitalEditor, analogEditor, 900);
+        addEditorToWorkspace(digitalEditor, 900);
       }
       await digitalEditor.bindPanel(notebooks.currentWidget);
       app.shell.activateById(digitalEditor.id);
+      enableEditorResize(digitalEditor);
     };
     const openAnalog = async (): Promise<void> => {
       if (analogEditor === null || analogEditor.isDisposed) {
         analogEditor = new AnalogEditorWidget({
           panel: () => notebooks.currentWidget
         });
-        addEditorToWorkspace(analogEditor, digitalEditor, 901);
+        addEditorToWorkspace(analogEditor, 901);
       }
       await analogEditor.bindPanel(notebooks.currentWidget);
       app.shell.activateById(analogEditor.id);
+      enableEditorResize(analogEditor);
     };
 
     app.commands.addCommand(DIGITAL_COMMAND, {
@@ -111,5 +102,51 @@ const plugin: JupyterFrontEndPlugin<void> = {
     notebooks.widgetAdded.connect((_sender, panel) => addToolbarButton(panel));
   }
 };
+
+function enableEditorResize(editor: DigitalEditorWidget | AnalogEditorWidget): void {
+  if (editor.hasClass('is-resize-pending') || editor.hasClass('is-resizable')) {
+    return;
+  }
+  editor.parent?.addClass('cascaqit-EditorHost');
+  editor.addClass('is-resize-pending');
+  setTimeout(() => {
+    if (!editor.isDisposed) {
+      const host = editorResizeHost(editor);
+      const splitSizes = host === null
+        ? null
+        : host.widgets.map(widget => widget.node.getBoundingClientRect().width);
+      editor.addClass('is-resizable');
+      if (editor.parent !== null) {
+        MessageLoop.sendMessage(editor.parent, Widget.Msg.FitRequest);
+        MessageLoop.sendMessage(editor.parent, Widget.Msg.UpdateRequest);
+      }
+      if (host !== null) {
+        MessageLoop.sendMessage(host, Widget.Msg.FitRequest);
+        MessageLoop.sendMessage(host, Widget.Msg.UpdateRequest);
+      }
+      requestAnimationFrame(() => {
+        if (host !== null && splitSizes !== null) {
+          host.setRelativeSizes(splitSizes);
+        }
+        requestAnimationFrame(() => {
+          editor.removeClass('is-resize-pending');
+          editor.addClass('is-resize-ready');
+        });
+      });
+    }
+  }, 300);
+}
+
+function editorResizeHost(editor: Widget): SplitPanel | null {
+  let parent = editor.parent;
+  let split: SplitPanel | null = null;
+  while (parent !== null) {
+    if (parent instanceof SplitPanel && parent.orientation === 'horizontal') {
+      split = parent;
+    }
+    parent = parent.parent;
+  }
+  return split;
+}
 
 export default plugin;

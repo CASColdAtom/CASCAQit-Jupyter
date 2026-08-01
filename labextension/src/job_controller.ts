@@ -85,6 +85,20 @@ export class JobController {
     };
   }
 
+  markDocumentChanged(): void {
+    this.stopPolling();
+    this.tracking = false;
+    this.current = {
+      state: null,
+      jobId: null,
+      cancelRequested: false,
+      message: 'Program changed; synchronize the generated cell before running.',
+      resultMime: null,
+      diagnostics: []
+    };
+    this.options.changed();
+  }
+
   async start(runOptions: JobRunOptions): Promise<void> {
     if (this.active) {
       return;

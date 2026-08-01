@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
 
+import { exerciseEditorResize } from './workspace';
+
 const SERVER_URL = 'http://127.0.0.1:8899';
 
 test('creates, restores, and detaches a Digital generated cell', async ({
@@ -29,8 +31,25 @@ test('creates, restores, and detaches a Digital generated cell', async ({
   const editor = page.locator('.cascaqit-Editor');
   await expect(editor).toBeVisible();
   await expect(editor.getByTestId('editor-status')).toHaveText('Draft');
+  if (desktop) {
+    await exerciseEditorResize(page, editor);
+  }
 
   await editor.getByRole('button', { name: 'Add qubit' }).click();
+  const secondQubit = editor.getByLabel('Qubit 2 ID');
+  await secondQubit.fill('q0');
+  await secondQubit.press('Tab');
+  await editor.getByTestId('generate-cell').click();
+  await expect(editor.getByTestId('editor-status')).toHaveText('Invalid');
+  const invalidReason = editor.getByTestId('editor-diagnostics');
+  await expect(invalidReason).toBeInViewport();
+  await expect(invalidReason).toContainText('EDITOR_DIGITAL_QUBIT_ID_DUPLICATE');
+  await expect(invalidReason).toContainText('Digital qubit IDs must be unique.');
+  await expect(invalidReason).toContainText('Rename or remove the duplicate qubit.');
+  await secondQubit.fill('q1');
+  await secondQubit.press('Tab');
+  await expect(editor.getByTestId('editor-status')).toHaveText('Draft');
+
   await editor.getByRole('button', { name: 'Add gate' }).click();
   await editor.getByLabel('Gate', { exact: true }).selectOption('cx');
   await editor.getByLabel('Control qubit').selectOption('q0');
@@ -66,6 +85,26 @@ test('creates, restores, and detaches a Digital generated cell', async ({
   await expect(result).toContainText('Offline deterministic');
   await expect(result).toContainText('2026');
   expect(await embeddedResultFits(result)).toBe(true);
+  const firstJobId = await editor.getByTestId('job-status').locator('code').textContent();
+
+  const measurementKey = editor.getByLabel('Measurement key');
+  await measurementKey.fill('m2');
+  await measurementKey.press('Tab');
+  await expect(editor.getByTestId('editor-status')).toHaveText('Draft');
+  await expect(editor.getByTestId('job-status')).toContainText('Not run');
+  await expect(editor.getByTestId('job-result')).toHaveCount(0);
+  await expect(editor.getByTestId('run-job')).toHaveText('Update & Run');
+  await expect(editor.getByTestId('run-job')).toBeEnabled();
+  await editor.getByTestId('run-job').click();
+  await expect(editor.getByTestId('job-status')).toContainText('Completed');
+  const generatedCode = page
+    .locator('.jp-CodeCell')
+    .filter({ hasText: 'circuit.h' })
+    .first();
+  await expect(generatedCode).toContainText('circuit.measure_all(key="m2")');
+  const secondJobId = await editor.getByTestId('job-status').locator('code').textContent();
+  expect(secondJobId).not.toBe(firstJobId);
+
   await result.evaluate(node => node.scrollIntoView({ block: 'center' }));
   await mkdir('artifacts/screenshots', { recursive: true });
   await editor.screenshot({
@@ -98,6 +137,7 @@ test('creates, restores, and detaches a Digital generated cell', async ({
   expect(savedSource).toContain('circuit.h("q0")');
   expect(savedSource).toContain('circuit.cx("q0", "q1")');
   expect(savedSource).toContain('circuit.ccx("q0", "q1", "q2")');
+  expect(savedSource).toContain('circuit.measure_all(key="m2")');
   expect(savedCell.metadata.cascaqit_jupyter.editor_document.metadata.last_job)
     .toMatchObject({ state: 'completed', seed: 2026, shots: 32 });
   expect(

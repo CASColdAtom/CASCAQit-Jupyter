@@ -96,7 +96,7 @@ export class DigitalEditorWidget extends Widget {
 
   private render(): void {
     const fragment = document.createDocumentFragment();
-    fragment.append(this.renderHeader());
+    fragment.append(this.renderHeader(), this.renderDiagnostics());
 
     const body = element('div', 'cascaqit-Editor-body is-digital');
     const authoring = element(
@@ -120,7 +120,6 @@ export class DigitalEditorWidget extends Widget {
     body.append(
       authoring,
       inspection,
-      this.renderDiagnostics(),
       this.renderActions()
     );
     fragment.append(body);
@@ -397,7 +396,12 @@ export class DigitalEditorWidget extends Widget {
   }
 
   private renderDiagnostics(): HTMLElement {
-    const region = element('div', 'cascaqit-Editor-message');
+    const invalid = this.document.compile_status === 'invalid';
+    const region = element(
+      'div',
+      invalid ? 'cascaqit-Editor-message is-invalid' : 'cascaqit-Editor-message'
+    );
+    region.dataset.testid = 'editor-diagnostics';
     region.setAttribute('role', 'status');
     region.setAttribute('aria-live', 'polite');
     region.textContent = this.message;
@@ -414,13 +418,14 @@ export class DigitalEditorWidget extends Widget {
   }
 
   private renderJob(): HTMLElement {
-    const runnable =
-      this.document.generated_cell_id !== null &&
-      !['draft', 'invalid', 'detached'].includes(this.document.compile_status);
+    const updateBeforeRun = this.document.compile_status === 'draft';
+    const runnable = this.document.generated_cell_id !== null &&
+      !['invalid', 'detached'].includes(this.document.compile_status);
     return renderJobView({
       state: this.job.view,
       active: this.job.active,
       canRun: runnable && !this.busy,
+      runLabel: updateBeforeRun ? 'Update & Run' : 'Run',
       shots: this.shots,
       seed: this.seed,
       onShots: value => {
@@ -429,7 +434,7 @@ export class DigitalEditorWidget extends Widget {
       onSeed: value => {
         this.seed = value;
       },
-      onRun: () => void this.job.start({ shots: this.shots, seed: this.seed }),
+      onRun: () => void this.runJob(),
       onCancel: () => void this.job.cancel()
     });
   }
@@ -451,16 +456,23 @@ export class DigitalEditorWidget extends Widget {
     this.document = document;
     this.message = 'Draft circuit';
     this.diagnostics = [];
-    this.render();
+    this.job.markDocumentChanged();
   }
 
-  private async compile(): Promise<void> {
+  private async runJob(): Promise<void> {
+    if (this.document.compile_status === 'draft' && !(await this.compile())) {
+      return;
+    }
+    await this.job.start({ shots: this.shots, seed: this.seed });
+  }
+
+  private async compile(): Promise<boolean> {
     const panel = this.panel();
     if (panel === null) {
       this.message = 'Open a Notebook with a running Python kernel.';
       this.diagnostics = [];
       this.render();
-      return;
+      return false;
     }
     await panel.sessionContext.ready;
     const kernel = panel.sessionContext.session?.kernel ?? null;
@@ -468,7 +480,7 @@ export class DigitalEditorWidget extends Widget {
       this.message = 'Open a Notebook with a running Python kernel.';
       this.diagnostics = [];
       this.render();
-      return;
+      return false;
     }
 
     this.busy = true;
@@ -486,7 +498,7 @@ export class DigitalEditorWidget extends Widget {
       if (payload.detached === true) {
         this.message = 'Detached: the generated cell contains user changes.';
         this.diagnostics = diagnosticMessages(payload.diagnostics);
-        return;
+        return false;
       }
 
       if (context.cellId === null) {
@@ -501,14 +513,19 @@ export class DigitalEditorWidget extends Widget {
       this.bridge.apply(panel, this.document, payload);
       this.message = 'Ready: generated code cell synchronized.';
       this.diagnostics = diagnosticMessages(payload.diagnostics);
+      return true;
     } catch (error) {
       const protocol = protocolError(error);
       this.document = {
         ...this.document,
         compile_status: 'invalid'
       };
-      this.message = protocol?.message ?? errorMessage(error);
+      this.message = 'Invalid circuit. Fix the issue below, then update or run again.';
       this.diagnostics = protocolDiagnostics(protocol);
+      if (this.diagnostics.length === 0) {
+        this.diagnostics = [protocol?.message ?? errorMessage(error)];
+      }
+      return false;
     } finally {
       this.busy = false;
       this.render();
@@ -669,8 +686,14 @@ function diagnosticMessages(value: unknown): string[] {
     }
     const code = Reflect.get(item, 'code');
     const message = Reflect.get(item, 'message');
+    const objectPath = Reflect.get(item, 'object_path');
+    const suggestion = Reflect.get(item, 'suggestion');
     return typeof message === 'string'
-      ? [`${typeof code === 'string' ? `${code}: ` : ''}${message}`]
+      ? [
+          `${typeof code === 'string' ? `${code}: ` : ''}${message}` +
+          `${typeof objectPath === 'string' ? ` Field: ${objectPath}.` : ''}` +
+          `${typeof suggestion === 'string' ? ` Suggestion: ${suggestion}` : ''}`
+        ]
       : [];
   });
 }
@@ -692,7 +715,13 @@ function protocolDiagnostics(value: ProtocolError | null): string[] {
   }
   const diagnostics = value.details.diagnostics;
   const messages = diagnosticMessages(diagnostics);
-  return messages.length > 0 ? messages : [`${value.code}: ${value.message}`];
+  return messages.length > 0
+    ? messages
+    : [
+        `${value.code}: ${value.message}` +
+        `${value.object_path === null ? '' : ` Field: ${value.object_path}.`}` +
+        `${value.suggestion === null ? '' : ` Suggestion: ${value.suggestion}`}`
+      ];
 }
 
 function errorMessage(value: unknown): string {

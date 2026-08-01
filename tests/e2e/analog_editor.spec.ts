@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
 
+import { exerciseEditorResize } from './workspace';
+
 const SERVER_URL = 'http://127.0.0.1:8899';
 
 test('compiles, runs, restores, validates, and detaches an Analog program', async ({
@@ -29,6 +31,9 @@ test('compiles, runs, restores, validates, and detaches an Analog program', asyn
   const editor = page.locator('.cascaqit-AnalogEditor');
   await expect(editor).toBeVisible();
   await expect(editor.getByTestId('analog-editor-status')).toHaveText('Draft');
+  if (desktop) {
+    await exerciseEditorResize(page, editor);
+  }
   await expect(editor.locator('.cascaqit-AnalogEditor-site')).toHaveCount(2);
   await expect(editor.locator('.cascaqit-AnalogEditor-segment')).toHaveCount(5);
 
@@ -72,6 +77,24 @@ test('compiles, runs, restores, validates, and detaches an Analog program', asyn
   await expect(result).toContainText('32');
   expect(await embeddedResultFits(result)).toBe(true);
   expect(await rendererHeaderFits(result)).toBe(true);
+  const firstJobId = await editor.getByTestId('job-status').locator('code').textContent();
+
+  const initialPhaseEnd = editor
+    .locator('[data-object-path="editor_model.controls.phase"]')
+    .getByLabel('End');
+  await initialPhaseEnd.fill('0.2');
+  await initialPhaseEnd.press('Tab');
+  await expect(editor.getByTestId('analog-editor-status')).toHaveText('Draft');
+  await expect(editor.getByTestId('job-status')).toContainText('Not run');
+  await expect(editor.getByTestId('job-result')).toHaveCount(0);
+  await expect(editor.getByTestId('run-job')).toHaveText('Update & Run');
+  await expect(editor.getByTestId('run-job')).toBeEnabled();
+  await editor.getByTestId('run-job').click();
+  await expect(editor.getByTestId('job-status')).toContainText('Completed');
+  await expect(generated).toContainText('values=[0.0, 0.2]');
+  const secondJobId = await editor.getByTestId('job-status').locator('code').textContent();
+  expect(secondJobId).not.toBe(firstJobId);
+
   await result.evaluate(node => node.scrollIntoView({ block: 'center' }));
   await mkdir('artifacts/screenshots', { recursive: true });
   await editor.screenshot({
@@ -118,7 +141,15 @@ test('compiles, runs, restores, validates, and detaches an Analog program', asyn
   await siteX.press('Tab');
   await editor.getByTestId('generate-analog-cell').click();
   await expect(editor.getByTestId('analog-editor-status')).toHaveText('Invalid');
-  await expect(editor).toContainText('ATOM_SPACING_TOO_SMALL');
+  const invalidReason = editor.getByTestId('editor-diagnostics');
+  await expect(invalidReason).toBeInViewport();
+  await expect(invalidReason).toContainText('ATOM_SPACING_TOO_SMALL');
+  await expect(invalidReason).toContainText(
+    'Atoms s0 and s1 are separated by 1.0, below 3.0.'
+  );
+  await expect(invalidReason).toContainText(
+    'Increase atom spacing or remove one atom.'
+  );
   await expect(
     editor.locator('[data-object-path="editor_model.register.sites"]')
   ).toHaveClass(/has-diagnostic/);

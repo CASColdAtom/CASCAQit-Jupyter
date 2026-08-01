@@ -117,7 +117,7 @@ export class AnalogEditorWidget extends Widget {
     const waveformRender = ++this.waveformRender;
     this.clearWaveformViews();
     const fragment = document.createDocumentFragment();
-    fragment.append(this.renderHeader());
+    fragment.append(this.renderHeader(), this.renderDiagnostics());
     const body = element('div', 'cascaqit-Editor-body is-analog');
     const authoring = element(
       'div',
@@ -137,7 +137,6 @@ export class AnalogEditorWidget extends Widget {
     body.append(
       authoring,
       inspection,
-      this.renderDiagnostics(),
       this.renderActions()
     );
     fragment.append(body);
@@ -458,7 +457,12 @@ export class AnalogEditorWidget extends Widget {
   }
 
   private renderDiagnostics(): HTMLElement {
-    const region = element('div', 'cascaqit-Editor-message');
+    const invalid = this.document.compile_status === 'invalid';
+    const region = element(
+      'div',
+      invalid ? 'cascaqit-Editor-message is-invalid' : 'cascaqit-Editor-message'
+    );
+    region.dataset.testid = 'editor-diagnostics';
     region.setAttribute('role', 'status');
     region.setAttribute('aria-live', 'polite');
     region.textContent = this.message;
@@ -488,13 +492,14 @@ export class AnalogEditorWidget extends Widget {
   }
 
   private renderJob(): HTMLElement {
-    const runnable =
-      this.document.generated_cell_id !== null &&
-      !['draft', 'invalid', 'detached'].includes(this.document.compile_status);
+    const updateBeforeRun = this.document.compile_status === 'draft';
+    const runnable = this.document.generated_cell_id !== null &&
+      !['invalid', 'detached'].includes(this.document.compile_status);
     return renderJobView({
       state: this.job.view,
       active: this.job.active,
       canRun: runnable && !this.busy,
+      runLabel: updateBeforeRun ? 'Update & Run' : 'Run',
       shots: this.shots,
       seed: this.seed,
       analogTimeSteps: this.analogTimeSteps,
@@ -507,11 +512,7 @@ export class AnalogEditorWidget extends Widget {
       onAnalogTimeSteps: value => {
         this.analogTimeSteps = value;
       },
-      onRun: () => void this.job.start({
-        shots: this.shots,
-        seed: this.seed,
-        analogTimeSteps: this.analogTimeSteps
-      }),
+      onRun: () => void this.runJob(),
       onCancel: () => void this.job.cancel()
     });
   }
@@ -529,16 +530,27 @@ export class AnalogEditorWidget extends Widget {
     this.registerTool = registerLayout(document);
     this.message = 'Draft Analog program';
     this.diagnostics = [];
-    this.render();
+    this.job.markDocumentChanged();
   }
 
-  private async compile(): Promise<void> {
+  private async runJob(): Promise<void> {
+    if (this.document.compile_status === 'draft' && !(await this.compile())) {
+      return;
+    }
+    await this.job.start({
+      shots: this.shots,
+      seed: this.seed,
+      analogTimeSteps: this.analogTimeSteps
+    });
+  }
+
+  private async compile(): Promise<boolean> {
     const panel = this.panel();
     if (panel === null) {
       this.message = 'Open a Notebook with a running Python kernel.';
       this.diagnostics = [];
       this.render();
-      return;
+      return false;
     }
     await panel.sessionContext.ready;
     const kernel = panel.sessionContext.session?.kernel ?? null;
@@ -546,7 +558,7 @@ export class AnalogEditorWidget extends Widget {
       this.message = 'Open a Notebook with a running Python kernel.';
       this.diagnostics = [];
       this.render();
-      return;
+      return false;
     }
     this.busy = true;
     this.message = 'Compiling with the CASCAQit kernel companion';
@@ -562,7 +574,7 @@ export class AnalogEditorWidget extends Widget {
       if (payload.detached === true) {
         this.message = 'Detached: the generated cell contains user changes.';
         this.diagnostics = diagnosticsFrom(payload.diagnostics);
-        return;
+        return false;
       }
       if (context.cellId === null) {
         const cellId = this.bridge.createGeneratedCell(panel);
@@ -575,11 +587,21 @@ export class AnalogEditorWidget extends Widget {
       this.bridge.apply(panel, this.document, payload);
       this.message = 'Ready: generated Analog code cell synchronized.';
       this.diagnostics = diagnosticsFrom(payload.diagnostics);
+      return true;
     } catch (error) {
       const protocol = protocolError(error);
       this.document = { ...this.document, compile_status: 'invalid' };
-      this.message = protocol?.message ?? errorMessage(error);
+      this.message = 'Invalid Analog program. Fix the issue below, then update or run again.';
       this.diagnostics = protocolDiagnostics(protocol);
+      if (this.diagnostics.length === 0) {
+        this.diagnostics = [{
+          code: protocol?.code ?? null,
+          message: protocol?.message ?? errorMessage(error),
+          objectPath: protocol?.object_path ?? null,
+          suggestion: protocol?.suggestion ?? null
+        }];
+      }
+      return false;
     } finally {
       this.busy = false;
       this.render();
@@ -705,10 +727,13 @@ function protocolDiagnostics(value: ProtocolError | null): AnalogDiagnostic[] {
 
 function diagnosticText(diagnostic: AnalogDiagnostic): string {
   const code = diagnostic.code === null ? '' : `${diagnostic.code}: `;
+  const objectPath = diagnostic.objectPath === null
+    ? ''
+    : ` Field: ${diagnostic.objectPath}.`;
   const suggestion = diagnostic.suggestion === null
     ? ''
-    : ` ${diagnostic.suggestion}`;
-  return `${code}${diagnostic.message}${suggestion}`;
+    : ` Suggestion: ${diagnostic.suggestion}`;
+  return `${code}${diagnostic.message}${objectPath}${suggestion}`;
 }
 
 function errorMessage(value: unknown): string {
