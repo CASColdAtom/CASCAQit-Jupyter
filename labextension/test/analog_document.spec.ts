@@ -100,6 +100,69 @@ describe('Analog editor document', () => {
     expect(registerLayout(edited).shape).toBe('custom');
   });
 
+  it('preserves manually added sites when redeploying a layout', () => {
+    const initial = createAnalogDocument(() => 'document.analog.test');
+    const added = addSite(initial, {
+      id: 'ancilla',
+      x: 12,
+      y: 3,
+      occupied: false
+    });
+
+    const deployed = applyRegisterLayout(added, {
+      ...registerLayout(added),
+      shape: 'line'
+    });
+
+    expect(deployed.editor_model.register.sites).toHaveLength(3);
+    expect(deployed.editor_model.register.layout_tool).toMatchObject({
+      shape: 'line',
+      atom_count: 3
+    });
+    expect(deployed.editor_model.register.sites[2]).toMatchObject({
+      id: 'ancilla',
+      occupied: false
+    });
+  });
+
+  it('expands fixed-grid layouts instead of dropping existing sites', () => {
+    let document = createAnalogDocument(() => 'document.analog.test');
+    for (let index = 2; index < 7; index += 1) {
+      document = addSite(document, { id: `site-${index}` });
+    }
+
+    const deployed = applyRegisterLayout(document, {
+      ...registerLayout(document),
+      shape: 'rectangle',
+      rows: 2,
+      columns: 3
+    });
+
+    expect(deployed.editor_model.register.sites).toHaveLength(8);
+    expect(deployed.editor_model.register.layout_tool).toMatchObject({
+      rows: 2,
+      columns: 4
+    });
+    expect(deployed.editor_model.register.sites.slice(0, 7).map(site => site.id))
+      .toEqual(['s0', 's1', 'site-2', 'site-3', 'site-4', 'site-5', 'site-6']);
+  });
+
+  it('preserves sites beyond a layout schema capacity', () => {
+    let document = createAnalogDocument(() => 'document.analog.test');
+    for (let index = 2; index < 101; index += 1) {
+      document = addSite(document, { id: `site-${index}` });
+    }
+
+    const deployed = applyRegisterLayout(document, {
+      ...registerLayout(document),
+      shape: 'line'
+    });
+
+    expect(deployed.editor_model.register.sites).toHaveLength(101);
+    expect(deployed.editor_model.register.layout_tool?.atom_count).toBe(100);
+    expect(deployed.editor_model.register.sites[100].id).toBe('site-100');
+  });
+
   it('restores only current Analog documents', () => {
     const document = createAnalogDocument(() => 'document.analog.test');
     expect(restoreAnalogDocument(document)).toEqual(document);

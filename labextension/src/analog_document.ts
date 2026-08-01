@@ -188,10 +188,13 @@ export function applyRegisterLayout(
   value: AnalogRegisterLayout
 ): AnalogEditorDocument {
   return edit(document, model => {
-    const layout = normalizeRegisterLayout(value);
+    const layout = fitRegisterLayout(
+      normalizeRegisterLayout(value),
+      model.register.sites.length
+    );
     model.register.layout_tool = layout;
     if (layout.shape !== 'custom') {
-      model.register.sites = sitesForLayout(layout);
+      model.register.sites = sitesForLayout(layout, model.register.sites);
     }
   });
 }
@@ -314,7 +317,41 @@ function normalizeRegisterLayout(
   };
 }
 
-function sitesForLayout(layout: AnalogRegisterLayout): AnalogSite[] {
+function fitRegisterLayout(
+  layout: AnalogRegisterLayout,
+  minimumSites: number
+): AnalogRegisterLayout {
+  const fitted = { ...layout };
+  if (fitted.shape === 'line' || fitted.shape === 'ring') {
+    fitted.atom_count = Math.min(
+      100,
+      Math.max(fitted.atom_count, minimumSites)
+    );
+  } else if (fitted.shape === 'rectangle' || fitted.shape === 'triangle') {
+    if (fitted.rows * fitted.columns < minimumSites) {
+      fitted.columns = Math.min(
+        20,
+        Math.max(fitted.columns, Math.ceil(minimumSites / fitted.rows))
+      );
+    }
+    if (fitted.rows * fitted.columns < minimumSites) {
+      fitted.rows = Math.min(
+        20,
+        Math.max(fitted.rows, Math.ceil(minimumSites / fitted.columns))
+      );
+    }
+  } else if (fitted.shape === 'hexagonal') {
+    while (fitted.rings < 5 && hexagonalSiteCount(fitted.rings) < minimumSites) {
+      fitted.rings += 1;
+    }
+  }
+  return fitted;
+}
+
+function sitesForLayout(
+  layout: AnalogRegisterLayout,
+  existingSites: AnalogSite[] = []
+): AnalogSite[] {
   let coordinates: Array<[number, number]>;
   switch (layout.shape) {
     case 'line':
@@ -350,12 +387,22 @@ function sitesForLayout(layout: AnalogRegisterLayout): AnalogSite[] {
       return [];
   }
   const centered = centerCoordinates(coordinates, layout.center_x, layout.center_y);
-  return centered.map(([x, y], index) => ({
-    id: `s${index}`,
-    x: rounded(x),
-    y: rounded(y),
-    occupied: true
-  }));
+  const existingIds = new Set(existingSites.map(site => site.id));
+  const deployed = centered.map(([x, y], index) => {
+    const existing = existingSites[index];
+    const id = existing?.id ?? nextId(existingIds, 's');
+    existingIds.add(id);
+    return {
+      id,
+      x: rounded(x),
+      y: rounded(y),
+      occupied: existing?.occupied ?? true
+    };
+  });
+  if (deployed.length < existingSites.length) {
+    deployed.push(...structuredClone(existingSites.slice(deployed.length)));
+  }
+  return deployed;
 }
 
 function rectangularCoordinates(
@@ -387,6 +434,10 @@ function hexagonalCoordinates(rings: number, spacing: number): Array<[number, nu
     spacing * (q + r / 2),
     spacing * Math.sqrt(3) * r / 2
   ]);
+}
+
+function hexagonalSiteCount(rings: number): number {
+  return 1 + 3 * rings * (rings + 1);
 }
 
 function centerCoordinates(

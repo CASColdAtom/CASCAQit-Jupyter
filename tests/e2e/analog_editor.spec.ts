@@ -37,6 +37,14 @@ test('compiles, runs, restores, validates, and detaches an Analog program', asyn
   await expect(editor.locator('.cascaqit-AnalogEditor-site')).toHaveCount(2);
   await expect(editor.locator('.cascaqit-AnalogEditor-segment')).toHaveCount(5);
 
+  await editor.getByRole('button', { name: 'Add register site' }).click();
+  await expect(editor.locator('.cascaqit-AnalogEditor-site')).toHaveCount(3);
+  await editor.getByLabel('Site s2 occupied').uncheck();
+  await editor.getByLabel('Register shape').selectOption('line');
+  await editor.getByTestId('apply-register-layout').click();
+  await expect(editor.locator('.cascaqit-AnalogEditor-site')).toHaveCount(3);
+  await expect(editor.getByLabel('Site s2 occupied')).not.toBeChecked();
+
   await editor.getByLabel('Register shape').selectOption('rectangle');
   await editor.getByLabel('Rows').fill('2');
   await editor.getByLabel('Columns').fill('3');

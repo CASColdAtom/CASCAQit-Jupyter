@@ -116,6 +116,34 @@ describe('AnalogEditorWidget', () => {
     ).toBe(true);
   });
 
+  it('keeps an added site when a layout is selected and applied again', () => {
+    const editor = new AnalogEditorWidget({
+      panel: () => null,
+      documentId: () => 'document.analog.test'
+    });
+    document.body.append(editor.node);
+
+    editor.node.querySelector<HTMLButtonElement>(
+      'button[aria-label="Add register site"]'
+    )!.click();
+    const added = editor.editorDocument.editor_model.register.sites[2];
+
+    const shape = editor.node.querySelector<HTMLSelectElement>(
+      'select[aria-label="Register shape"]'
+    )!;
+    shape.value = 'line';
+    shape.dispatchEvent(new Event('change'));
+    editor.node.querySelector<HTMLButtonElement>(
+      'button[aria-label="Apply atom register layout"]'
+    )!.click();
+
+    expect(editor.editorDocument.editor_model.register.sites).toHaveLength(3);
+    expect(editor.editorDocument.editor_model.register.sites[2]).toMatchObject({
+      id: added.id,
+      occupied: added.occupied
+    });
+  });
+
   it('waits for notebook content before restoring Analog metadata', async () => {
     let markReady: () => void = () => undefined;
     const ready = new Promise<void>(resolve => {
