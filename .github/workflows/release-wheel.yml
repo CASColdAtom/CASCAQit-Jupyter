@@ -70,6 +70,7 @@ jobs:
         run: |
           npm run typecheck
           npm run test:frontend
+          npm audit --audit-level=moderate
 
       - name: Download released CASCAQit wheel
         env:

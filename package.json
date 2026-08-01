@@ -38,6 +38,7 @@
     "vitest": "^4.0.17"
   },
   "overrides": {
+    "sanitize-html": "2.17.6",
     "@jupyterlab/builder": {
       "glob": "^13.0.6"
     }

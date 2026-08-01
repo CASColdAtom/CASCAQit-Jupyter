@@ -16,6 +16,7 @@ export interface KernelConnection {
   readonly id: string;
   requestExecute: Kernel.IKernelConnection['requestExecute'];
   createComm: Kernel.IKernelConnection['createComm'];
+  statusChanged?: Kernel.IKernelConnection['statusChanged'];
 }
 
 interface PendingResponse {
@@ -27,7 +28,8 @@ interface PendingResponse {
 export class KernelClient {
   constructor(
     private readonly tracker = new RequestTracker(),
-    private readonly handshakeTimeoutMs = 10_000
+    private readonly handshakeTimeoutMs = 10_000,
+    private readonly connectionProbeTimeoutMs = 2_000
   ) {}
 
   get connectedKernelId(): string | null {
@@ -36,23 +38,47 @@ export class KernelClient {
 
   async connect(kernel: KernelConnection): Promise<void> {
     if (this.kernelId === kernel.id && this.comm !== null) {
-      return;
+      try {
+        const response = await this.request(
+          '__kernel__',
+          0,
+          'ping',
+          {},
+          this.connectionProbeTimeoutMs
+        );
+        if (response.status === 'ok') {
+          return;
+        }
+      } catch {
+        // A restarted kernel can retain its Jupyter ID while invalidating every comm.
+      }
     }
     this.disconnect('Kernel connection changed.');
     this.kernelId = kernel.id;
+    this.kernel = kernel;
+    kernel.statusChanged?.connect(this.handleKernelStatus, this);
 
-    const registration = kernel.requestExecute({
-      code: REGISTER_CODE,
-      silent: true,
-      store_history: false,
-      user_expressions: {},
-      allow_stdin: false,
-      stop_on_error: true
-    });
-    const reply = await registration.done;
+    let reply: Awaited<ReturnType<KernelConnection['requestExecute']>['done']>;
+    try {
+      const registration = kernel.requestExecute({
+        code: REGISTER_CODE,
+        silent: true,
+        store_history: false,
+        user_expressions: {},
+        allow_stdin: false,
+        stop_on_error: true
+      });
+      reply = await registration.done;
+    } catch (error) {
+      this.disconnect('CASCAQit kernel companion registration failed.');
+      throw error;
+    }
     if (reply.content.status !== 'ok') {
-      this.kernelId = null;
+      this.disconnect('CASCAQit kernel companion registration failed.');
       throw new Error('CASCAQit kernel companion registration failed.');
+    }
+    if (this.kernel !== kernel || this.kernelId !== kernel.id) {
+      throw new Error('CASCAQit kernel connection changed during registration.');
     }
 
     const comm = kernel.createComm(COMM_TARGET);
@@ -121,9 +147,22 @@ export class KernelClient {
       pending.reject(new Error(message));
     }
     this.pending.clear();
-    this.comm?.dispose();
+    const comm = this.comm;
+    const kernel = this.kernel;
     this.comm = null;
+    this.kernel = null;
     this.kernelId = null;
+    kernel?.statusChanged?.disconnect(this.handleKernelStatus, this);
+    comm?.dispose();
+  }
+
+  private handleKernelStatus(
+    _kernel: Kernel.IKernelConnection,
+    status: Kernel.Status
+  ): void {
+    if (['restarting', 'autorestarting', 'dead'].includes(status)) {
+      this.disconnect(`CASCAQit kernel became ${status}.`);
+    }
   }
 
   private handleKernelReady(event: KernelReadyEvent): void {
@@ -153,6 +192,7 @@ export class KernelClient {
   }
 
   private kernelId: string | null = null;
+  private kernel: KernelConnection | null = null;
   private comm: Kernel.IComm | null = null;
   private readonly pending = new Map<string, PendingResponse>();
 }
