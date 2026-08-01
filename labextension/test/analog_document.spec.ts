@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  applyRegisterLayout,
   addSegment,
   addSite,
   createAnalogDocument,
   removeSegment,
   removeSite,
+  registerLayout,
   restoreAnalogDocument,
   setAnalogMeasurement,
   updateSegment,
@@ -54,6 +56,48 @@ describe('Analog editor document', () => {
 
     document = removeSegment(document, 'detuning', 1);
     expect(document.editor_model.controls.detuning.segments).toHaveLength(1);
+  });
+
+  it.each([
+    ['line', { atom_count: 4, spacing_x: 6 }, 4],
+    ['rectangle', { rows: 2, columns: 3, spacing_x: 5, spacing_y: 7 }, 6],
+    ['triangle', { rows: 3, columns: 2, spacing_x: 5 }, 6],
+    ['ring', { atom_count: 8, radius: 10 }, 8],
+    ['hexagonal', { rings: 2, spacing_x: 5 }, 19]
+  ] as const)('generates a deterministic %s register', (shape, update, count) => {
+    const initial = createAnalogDocument(() => 'document.analog.test');
+    const layout = { ...registerLayout(initial), ...update, shape };
+    const first = applyRegisterLayout(initial, layout);
+    const second = applyRegisterLayout(initial, layout);
+
+    expect(first.editor_model.register.sites).toEqual(
+      second.editor_model.register.sites
+    );
+    expect(first.editor_model.register.sites).toHaveLength(count);
+    expect(first.editor_model.register.layout_tool).toEqual(layout);
+    expect(new Set(first.editor_model.register.sites.map(site => site.id)).size)
+      .toBe(count);
+  });
+
+  it('centers generated sites and returns to custom after point editing', () => {
+    const initial = createAnalogDocument(() => 'document.analog.test');
+    const generated = applyRegisterLayout(initial, {
+      ...registerLayout(initial),
+      shape: 'rectangle',
+      rows: 2,
+      columns: 2,
+      spacing_x: 6,
+      spacing_y: 8,
+      center_x: 10,
+      center_y: -4
+    });
+    const xs = generated.editor_model.register.sites.map(site => site.x);
+    const ys = generated.editor_model.register.sites.map(site => site.y);
+    expect([Math.min(...xs), Math.max(...xs)]).toEqual([7, 13]);
+    expect([Math.min(...ys), Math.max(...ys)]).toEqual([-8, 0]);
+
+    const edited = updateSite(generated, 0, { x: 8 });
+    expect(registerLayout(edited).shape).toBe('custom');
   });
 
   it('restores only current Analog documents', () => {

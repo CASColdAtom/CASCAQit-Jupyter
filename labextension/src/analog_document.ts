@@ -1,6 +1,26 @@
 import type { CompileStatus, DocumentIdFactory } from './digital_document';
 
 export type AnalogChannel = 'rabi' | 'detuning' | 'phase';
+export type AnalogRegisterShape =
+  | 'custom'
+  | 'line'
+  | 'rectangle'
+  | 'triangle'
+  | 'ring'
+  | 'hexagonal';
+
+export interface AnalogRegisterLayout {
+  shape: AnalogRegisterShape;
+  atom_count: number;
+  rows: number;
+  columns: number;
+  spacing_x: number;
+  spacing_y: number;
+  radius: number;
+  rings: number;
+  center_x: number;
+  center_y: number;
+}
 
 export interface AnalogSite {
   id: string;
@@ -21,6 +41,7 @@ export interface AnalogModel {
   register: {
     coordinate_unit: 'um';
     sites: AnalogSite[];
+    layout_tool?: AnalogRegisterLayout;
   };
   controls: Record<AnalogChannel, { segments: AnalogSegment[] }>;
   measurement: { enabled: boolean };
@@ -51,6 +72,7 @@ export function createAnalogDocument(
       model_type: 'analog',
       register: {
         coordinate_unit: 'um',
+        layout_tool: defaultRegisterLayout(),
         sites: [
           { id: 's0', x: 0, y: 0, occupied: true },
           { id: 's1', x: 5, y: 0, occupied: true }
@@ -117,6 +139,7 @@ export function addSite(
   site?: Partial<AnalogSite>
 ): AnalogEditorDocument {
   return edit(document, model => {
+    markRegisterCustom(model);
     const existing = new Set(model.register.sites.map(item => item.id));
     const id = site?.id?.trim() || nextId(existing, 's');
     const last = model.register.sites.at(-1);
@@ -135,6 +158,7 @@ export function updateSite(
   update: Partial<AnalogSite>
 ): AnalogEditorDocument {
   return edit(document, model => {
+    markRegisterCustom(model);
     const site = model.register.sites[index];
     if (site !== undefined) {
       model.register.sites[index] = {
@@ -154,8 +178,31 @@ export function removeSite(
     return document;
   }
   return edit(document, model => {
+    markRegisterCustom(model);
     model.register.sites.splice(index, 1);
   });
+}
+
+export function applyRegisterLayout(
+  document: AnalogEditorDocument,
+  value: AnalogRegisterLayout
+): AnalogEditorDocument {
+  return edit(document, model => {
+    const layout = normalizeRegisterLayout(value);
+    model.register.layout_tool = layout;
+    if (layout.shape !== 'custom') {
+      model.register.sites = sitesForLayout(layout);
+    }
+  });
+}
+
+export function registerLayout(
+  document: AnalogEditorDocument
+): AnalogRegisterLayout {
+  const value = document.editor_model.register.layout_tool;
+  return value === undefined
+    ? { ...defaultRegisterLayout(), shape: 'custom' }
+    : normalizeRegisterLayout(value);
 }
 
 export function addSegment(
@@ -233,6 +280,156 @@ function edit(
   next.revision += 1;
   next.compile_status = 'draft';
   return next;
+}
+
+function defaultRegisterLayout(): AnalogRegisterLayout {
+  return {
+    shape: 'line',
+    atom_count: 2,
+    rows: 2,
+    columns: 3,
+    spacing_x: 5,
+    spacing_y: 5,
+    radius: 8,
+    rings: 1,
+    center_x: 2.5,
+    center_y: 0
+  };
+}
+
+function normalizeRegisterLayout(
+  value: AnalogRegisterLayout
+): AnalogRegisterLayout {
+  return {
+    shape: value.shape,
+    atom_count: integerInRange(value.atom_count, 1, 100, 2),
+    rows: integerInRange(value.rows, 1, 20, 2),
+    columns: integerInRange(value.columns, 1, 20, 3),
+    spacing_x: positiveFinite(value.spacing_x, 5),
+    spacing_y: positiveFinite(value.spacing_y, 5),
+    radius: positiveFinite(value.radius, 8),
+    rings: integerInRange(value.rings, 1, 5, 1),
+    center_x: finite(value.center_x, 0),
+    center_y: finite(value.center_y, 0)
+  };
+}
+
+function sitesForLayout(layout: AnalogRegisterLayout): AnalogSite[] {
+  let coordinates: Array<[number, number]>;
+  switch (layout.shape) {
+    case 'line':
+      coordinates = Array.from({ length: layout.atom_count }, (_, index) => [
+        index * layout.spacing_x,
+        0
+      ]);
+      break;
+    case 'rectangle':
+      coordinates = rectangularCoordinates(layout);
+      break;
+    case 'triangle':
+      coordinates = Array.from({ length: layout.rows }, (_, row) =>
+        Array.from({ length: layout.columns }, (_, column) => [
+          (column + (row % 2) / 2) * layout.spacing_x,
+          row * layout.spacing_x * Math.sqrt(3) / 2
+        ] as [number, number])
+      ).flat();
+      break;
+    case 'ring':
+      coordinates = Array.from({ length: layout.atom_count }, (_, index) => {
+        const angle = (2 * Math.PI * index) / layout.atom_count;
+        return [
+          layout.radius * Math.cos(angle),
+          layout.radius * Math.sin(angle)
+        ];
+      });
+      break;
+    case 'hexagonal':
+      coordinates = hexagonalCoordinates(layout.rings, layout.spacing_x);
+      break;
+    case 'custom':
+      return [];
+  }
+  const centered = centerCoordinates(coordinates, layout.center_x, layout.center_y);
+  return centered.map(([x, y], index) => ({
+    id: `s${index}`,
+    x: rounded(x),
+    y: rounded(y),
+    occupied: true
+  }));
+}
+
+function rectangularCoordinates(
+  layout: AnalogRegisterLayout
+): Array<[number, number]> {
+  return Array.from({ length: layout.rows }, (_, row) =>
+    Array.from({ length: layout.columns }, (_, column) => [
+      column * layout.spacing_x,
+      row * layout.spacing_y
+    ] as [number, number])
+  ).flat();
+}
+
+function hexagonalCoordinates(rings: number, spacing: number): Array<[number, number]> {
+  const axial: Array<[number, number]> = [];
+  for (let q = -rings; q <= rings; q += 1) {
+    for (let r = -rings; r <= rings; r += 1) {
+      if (Math.max(Math.abs(q), Math.abs(r), Math.abs(-q - r)) <= rings) {
+        axial.push([q, r]);
+      }
+    }
+  }
+  axial.sort((left, right) => {
+    const leftRing = Math.max(Math.abs(left[0]), Math.abs(left[1]), Math.abs(-left[0] - left[1]));
+    const rightRing = Math.max(Math.abs(right[0]), Math.abs(right[1]), Math.abs(-right[0] - right[1]));
+    return leftRing - rightRing || left[1] - right[1] || left[0] - right[0];
+  });
+  return axial.map(([q, r]) => [
+    spacing * (q + r / 2),
+    spacing * Math.sqrt(3) * r / 2
+  ]);
+}
+
+function centerCoordinates(
+  coordinates: Array<[number, number]>,
+  centerX: number,
+  centerY: number
+): Array<[number, number]> {
+  const xs = coordinates.map(([x]) => x);
+  const ys = coordinates.map(([, y]) => y);
+  const offsetX = centerX - (Math.min(...xs) + Math.max(...xs)) / 2;
+  const offsetY = centerY - (Math.min(...ys) + Math.max(...ys)) / 2;
+  return coordinates.map(([x, y]) => [x + offsetX, y + offsetY]);
+}
+
+function markRegisterCustom(model: AnalogModel): void {
+  model.register.layout_tool = {
+    ...(model.register.layout_tool ?? defaultRegisterLayout()),
+    shape: 'custom'
+  };
+}
+
+function integerInRange(
+  value: number,
+  minimum: number,
+  maximum: number,
+  fallback: number
+): number {
+  if (!Number.isFinite(value)) {
+    return fallback;
+  }
+  return Math.min(maximum, Math.max(minimum, Math.round(value)));
+}
+
+function positiveFinite(value: number, fallback: number): number {
+  return Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
+function finite(value: number, fallback: number): number {
+  return Number.isFinite(value) ? value : fallback;
+}
+
+function rounded(value: number): number {
+  return Number(value.toFixed(12));
 }
 
 function nextId(existing: Set<string>, prefix: string): string {

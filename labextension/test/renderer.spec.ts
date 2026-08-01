@@ -43,12 +43,14 @@ describe('CASCAQit renderer', () => {
         program_type: 'digital',
         validation_mode: 'ir_only',
         circuit: {
-          qubits: ['q0', 'q1'],
+          qubits: ['q0', 'q1', 'q2'],
           gates: [
             { name: 'h', targets: ['q0'] },
-            { name: 'cx', targets: ['q0', 'q1'] }
+            { name: 'cx', targets: ['q0', 'q1'] },
+            { name: 'ccx', targets: ['q0', 'q1', 'q2'] },
+            { name: 'cz', targets: ['q1', 'q2'] }
           ],
-          measurements: [{ targets: ['q0', 'q1'], key: 'm' }]
+          measurements: [{ targets: ['q0', 'q1', 'q2'], key: 'm' }]
         }
       })
     );
@@ -58,9 +60,10 @@ describe('CASCAQit renderer', () => {
     expect(svg?.getAttribute('viewBox')).toMatch(/^0 0 \d+ \d+$/);
     expect(svg?.dataset.cascaqitNonempty).toBe('true');
     expect(node.textContent).toContain('q0');
-    expect(node.querySelectorAll('.cascaqit-Svg-control')).toHaveLength(1);
-    expect(node.querySelectorAll('.cascaqit-Svg-target')).toHaveLength(1);
-    expect(node.querySelectorAll('.cascaqit-Svg-measure')).toHaveLength(2);
+    expect(node.querySelectorAll('[data-role="control"]')).toHaveLength(4);
+    expect(node.querySelectorAll('[data-role="target"]')).toHaveLength(3);
+    expect(node.querySelectorAll('.cascaqit-Svg-target')).toHaveLength(2);
+    expect(node.querySelectorAll('.cascaqit-Svg-measure')).toHaveLength(3);
   });
 
   it('renders separate Analog register and global waveform views', () => {

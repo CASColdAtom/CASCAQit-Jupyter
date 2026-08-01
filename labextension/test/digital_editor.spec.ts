@@ -70,6 +70,38 @@ describe('DigitalEditorWidget', () => {
     expect(editor.editorDocument.compile_status).toBe('draft');
   });
 
+  it('distinguishes control and target qubits for two- and three-qubit gates', () => {
+    const editor = new DigitalEditorWidget({
+      panel: () => null,
+      documentId: () => 'document.digital.controls'
+    });
+    document.body.append(editor.node);
+    editor.node.querySelector<HTMLButtonElement>(
+      'button[aria-label="Add qubit"]'
+    )!.click();
+
+    const addGate = (gateName: string): void => {
+      const gate = editor.node.querySelector<HTMLSelectElement>(
+        'select[aria-label="Gate"]'
+      )!;
+      gate.value = gateName;
+      gate.dispatchEvent(new Event('change'));
+      editor.node.querySelector<HTMLButtonElement>(
+        'button[aria-label="Add gate"]'
+      )!.click();
+    };
+    addGate('cx');
+    addGate('ccx');
+
+    const preview = editor.node.querySelector(
+      '[data-testid="editor-circuit-preview"]'
+    )!;
+    expect(preview.querySelectorAll('[data-role="control"]')).toHaveLength(3);
+    expect(preview.querySelectorAll('[data-role="target"]')).toHaveLength(2);
+    expect(editor.node.textContent).toContain('Control q0 -> target q1');
+    expect(editor.node.textContent).toContain('Controls q0, q1 -> target q2');
+  });
+
   it('waits for notebook content before restoring generated cell metadata', async () => {
     let markReady: () => void = () => undefined;
     const ready = new Promise<void>(resolve => {

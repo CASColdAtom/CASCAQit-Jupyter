@@ -4,18 +4,26 @@ import { Widget } from '@lumino/widgets';
 import {
   AnalogChannel,
   AnalogEditorDocument,
+  AnalogRegisterLayout,
+  AnalogRegisterShape,
   AnalogSegment,
   AnalogSite,
   addSegment,
   addSite,
+  applyRegisterLayout,
   createAnalogDocument,
   removeSegment,
   removeSite,
+  registerLayout,
   setAnalogMeasurement,
   updateSegment,
   updateSite,
   withAnalogCompileResult
 } from './analog_document';
+import {
+  BokehViewHandle,
+  renderBokehWaveforms
+} from './bokeh_waveform';
 import { KernelClient } from './kernel_client';
 import { JobController } from './job_controller';
 import { renderJobView } from './job_view';
@@ -46,6 +54,7 @@ export class AnalogEditorWidget extends Widget {
     this.client = options.client ?? new KernelClient();
     this.documentId = options.documentId;
     this.document = createAnalogDocument(this.documentId);
+    this.registerTool = registerLayout(this.document);
     this.job = new JobController({
       panel: this.panel,
       document: () => this.document,
@@ -80,6 +89,7 @@ export class AnalogEditorWidget extends Widget {
     }
     const restored = this.bridge.restoreAnalog(panel);
     this.document = restored ?? createAnalogDocument(this.documentId);
+    this.registerTool = registerLayout(this.document);
     this.job.restore(this.document);
     this.message = restored === null
       ? 'Draft Analog program'
@@ -95,6 +105,8 @@ export class AnalogEditorWidget extends Widget {
   dispose(): void {
     if (!this.isDisposed) {
       this.panelBinding += 1;
+      this.waveformRender += 1;
+      this.clearWaveformViews();
       this.job.dispose();
       this.client.disconnect('CASCAQit Analog editor closed.');
     }
@@ -102,6 +114,8 @@ export class AnalogEditorWidget extends Widget {
   }
 
   private render(): void {
+    const waveformRender = ++this.waveformRender;
+    this.clearWaveformViews();
     const fragment = document.createDocumentFragment();
     fragment.append(this.renderHeader());
     const body = element('div', 'cascaqit-Editor-body is-analog');
@@ -118,11 +132,8 @@ export class AnalogEditorWidget extends Widget {
       'div',
       'cascaqit-Editor-column cascaqit-Editor-column--inspection'
     );
-    inspection.append(
-      this.renderRegisterPreview(),
-      this.renderWaveformPreview(),
-      this.renderJob()
-    );
+    const waveform = this.renderWaveformPreview();
+    inspection.append(this.renderRegisterPreview(), waveform.section, this.renderJob());
     body.append(
       authoring,
       inspection,
@@ -131,6 +142,7 @@ export class AnalogEditorWidget extends Widget {
     );
     fragment.append(body);
     this.node.replaceChildren(fragment);
+    void this.mountBokehWaveforms(waveform.target, waveformRender);
     if (this.busy || this.job.active) {
       this.node
         .querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLButtonElement>(
@@ -209,8 +221,92 @@ export class AnalogEditorWidget extends Widget {
     });
     const add = commandButton('Add site', 'Add register site');
     add.addEventListener('click', () => this.setDocument(addSite(this.document)));
-    section.append(list, add, this.pathDiagnostics(path));
+    section.append(this.renderRegisterTool(), list, add, this.pathDiagnostics(path));
     return section;
+  }
+
+  private renderRegisterTool(): HTMLElement {
+    const fieldset = element('fieldset', 'cascaqit-AnalogEditor-layoutTool');
+    const legend = document.createElement('legend');
+    legend.textContent = 'Array layout';
+    const shape = document.createElement('select');
+    shape.setAttribute('aria-label', 'Register shape');
+    shape.dataset.testid = 'register-shape';
+    const shapes: Array<[AnalogRegisterShape, string]> = [
+      ['custom', 'Custom coordinates'],
+      ['line', 'Line'],
+      ['rectangle', 'Rectangular grid'],
+      ['triangle', 'Triangular lattice'],
+      ['ring', 'Ring'],
+      ['hexagonal', 'Hexagonal lattice']
+    ];
+    for (const [value, label] of shapes) {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = label;
+      option.selected = value === this.registerTool.shape;
+      shape.append(option);
+    }
+    shape.addEventListener('change', () => {
+      this.registerTool = {
+        ...this.registerTool,
+        shape: shape.value as AnalogRegisterShape
+      };
+      this.render();
+    });
+    const fields = element('div', 'cascaqit-AnalogEditor-layoutFields');
+    fields.append(layoutField('Shape', shape));
+    const addNumber = (
+      label: string,
+      key: keyof Omit<AnalogRegisterLayout, 'shape'>,
+      minimum?: number,
+      maximum?: number,
+      step = 'any'
+    ): void => {
+      const input = numberInput(this.registerTool[key], label, value => {
+        this.registerTool = { ...this.registerTool, [key]: value };
+      });
+      if (minimum !== undefined) {
+        input.min = String(minimum);
+      }
+      if (maximum !== undefined) {
+        input.max = String(maximum);
+      }
+      input.step = step;
+      fields.append(layoutField(label, input));
+    };
+    if (this.registerTool.shape === 'line') {
+      addNumber('Atoms', 'atom_count', 1, 100, '1');
+      addNumber('Spacing (um)', 'spacing_x', Number.EPSILON);
+    } else if (this.registerTool.shape === 'rectangle') {
+      addNumber('Rows', 'rows', 1, 20, '1');
+      addNumber('Columns', 'columns', 1, 20, '1');
+      addNumber('X spacing (um)', 'spacing_x', Number.EPSILON);
+      addNumber('Y spacing (um)', 'spacing_y', Number.EPSILON);
+    } else if (this.registerTool.shape === 'triangle') {
+      addNumber('Rows', 'rows', 1, 20, '1');
+      addNumber('Columns', 'columns', 1, 20, '1');
+      addNumber('Spacing (um)', 'spacing_x', Number.EPSILON);
+    } else if (this.registerTool.shape === 'ring') {
+      addNumber('Atoms', 'atom_count', 1, 100, '1');
+      addNumber('Radius (um)', 'radius', Number.EPSILON);
+    } else if (this.registerTool.shape === 'hexagonal') {
+      addNumber('Rings', 'rings', 1, 5, '1');
+      addNumber('Spacing (um)', 'spacing_x', Number.EPSILON);
+    }
+    if (this.registerTool.shape !== 'custom') {
+      addNumber('Center x (um)', 'center_x');
+      addNumber('Center y (um)', 'center_y');
+      const apply = commandButton('Apply layout', 'Apply atom register layout');
+      apply.dataset.testid = 'apply-register-layout';
+      apply.addEventListener('click', () => {
+        this.setDocument(applyRegisterLayout(this.document, this.registerTool));
+      });
+      fieldset.append(legend, fields, apply);
+    } else {
+      fieldset.append(legend, fields);
+    }
+    return fieldset;
   }
 
   private renderChannel(channel: AnalogChannel): HTMLElement {
@@ -318,46 +414,47 @@ export class AnalogEditorWidget extends Widget {
     return section;
   }
 
-  private renderWaveformPreview(): HTMLElement {
+  private renderWaveformPreview(): { section: HTMLElement; target: HTMLElement } {
     const section = editorSection('Waveform preview');
-    const viewport = element('div', 'cascaqit-Editor-preview');
+    const viewport = element(
+      'div',
+      'cascaqit-Editor-preview cascaqit-AnalogEditor-bokeh'
+    );
     viewport.dataset.testid = 'analog-waveform-preview';
-    const svg = svgNode('svg');
-    svg.setAttribute('viewBox', '0 0 480 270');
-    svg.setAttribute('role', 'img');
-    svg.setAttribute('aria-label', 'Analog global waveform preview');
-    svg.dataset.cascaqitNonempty = 'true';
-    CHANNELS.forEach((channel, row) => {
-      const points = waveformPoints(
-        this.document.editor_model.controls[channel].segments
-      );
-      const values = points.map(point => point.value);
-      const duration = Math.max(points.at(-1)?.time ?? 1, Number.EPSILON);
-      const min = Math.min(...values);
-      const max = Math.max(...values);
-      const top = 22 + row * 86;
-      const baseline = top + 58;
-      svg.append(
-        svgLine(64, baseline, 456, baseline, 'cascaqit-AnalogEditor-axis'),
-        svgText(8, top + 12, channelLabel(channel), 'cascaqit-Editor-svgLabel')
-      );
-      const polyline = svgNode('polyline');
-      polyline.setAttribute(
-        'points',
-        points
-          .map(point => {
-            const x = 64 + (point.time / duration) * 392;
-            const y = scale(point.value, min, max, baseline - 8, top + 8);
-            return `${x},${y}`;
-          })
-          .join(' ')
-      );
-      polyline.setAttribute('class', `cascaqit-AnalogEditor-wave is-${channel}`);
-      svg.append(polyline);
-    });
-    viewport.append(svg);
+    viewport.setAttribute('role', 'img');
+    viewport.setAttribute('aria-label', 'Bokeh Analog global waveform preview');
     section.append(viewport);
-    return section;
+    return { section, target: viewport };
+  }
+
+  private async mountBokehWaveforms(
+    target: HTMLElement,
+    render: number
+  ): Promise<void> {
+    try {
+      const views = await renderBokehWaveforms(
+        target,
+        CHANNELS.map(channel => ({
+          channel,
+          segments: this.document.editor_model.controls[channel].segments
+        })),
+        () => !this.isDisposed && render === this.waveformRender
+      );
+      if (this.isDisposed || render !== this.waveformRender) {
+        views.forEach(view => view.remove());
+        return;
+      }
+      this.waveformViews = views;
+    } catch (error) {
+      if (!this.isDisposed && render === this.waveformRender) {
+        target.textContent = `Waveform rendering failed: ${errorMessage(error)}`;
+      }
+    }
+  }
+
+  private clearWaveformViews(): void {
+    this.waveformViews.forEach(view => view.remove());
+    this.waveformViews = [];
   }
 
   private renderDiagnostics(): HTMLElement {
@@ -429,6 +526,7 @@ export class AnalogEditorWidget extends Widget {
 
   private setDocument(document: AnalogEditorDocument): void {
     this.document = document;
+    this.registerTool = registerLayout(document);
     this.message = 'Draft Analog program';
     this.diagnostics = [];
     this.render();
@@ -538,6 +636,7 @@ export class AnalogEditorWidget extends Widget {
   }
 
   private document: AnalogEditorDocument;
+  private registerTool: AnalogRegisterLayout;
   private readonly panel: () => NotebookPanel | null;
   private readonly bridge: NotebookBridge;
   private readonly client: KernelClient;
@@ -550,22 +649,8 @@ export class AnalogEditorWidget extends Widget {
   private seed = 2026;
   private analogTimeSteps = 80;
   private panelBinding = 0;
-}
-
-function waveformPoints(
-  segments: AnalogSegment[]
-): Array<{ time: number; value: number }> {
-  if (segments.length === 0) {
-    return [{ time: 0, value: 0 }];
-  }
-  const points = [{ time: 0, value: segments[0].start_value }];
-  for (const segment of segments) {
-    points.push({
-      time: points.at(-1)!.time + Math.max(segment.duration, 0),
-      value: segment.end_value
-    });
-  }
-  return points;
+  private waveformRender = 0;
+  private waveformViews: BokehViewHandle[] = [];
 }
 
 function diagnosticsFrom(value: unknown): AnalogDiagnostic[] {
@@ -694,6 +779,17 @@ function segmentNumberField(
 }
 
 function fieldLabel(label: string, input: HTMLInputElement): HTMLLabelElement {
+  const field = document.createElement('label');
+  const text = document.createElement('span');
+  text.textContent = label;
+  field.append(text, input);
+  return field;
+}
+
+function layoutField(
+  label: string,
+  input: HTMLInputElement | HTMLSelectElement
+): HTMLLabelElement {
   const field = document.createElement('label');
   const text = document.createElement('span');
   text.textContent = label;

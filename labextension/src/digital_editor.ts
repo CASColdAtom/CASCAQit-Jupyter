@@ -20,8 +20,11 @@ import { renderJobView } from './job_view';
 import { CompilePayload, NotebookBridge } from './notebook_bridge';
 import type { CommResponse, ProtocolError } from './protocol';
 
-const GATE_OPTIONS = ['h', 'x', 'y', 'z', 'rx', 'ry', 'rz', 'cx', 'cz', 'swap'];
+const GATE_OPTIONS = [
+  'h', 'x', 'y', 'z', 'rx', 'ry', 'rz', 'cx', 'cy', 'cz', 'swap', 'ccx'
+];
 const ROTATION_GATES = new Set(['rx', 'ry', 'rz']);
+const CONTROLLED_TWO_QUBIT_GATES = new Set(['cx', 'cy', 'cz']);
 
 export interface DigitalEditorOptions {
   panel: () => NotebookPanel | null;
@@ -187,11 +190,16 @@ export class DigitalEditorWidget extends Widget {
     }
     const targetA = targetSelect(
       this.document.editor_model.qubits,
-      'First gate target'
+      'Gate target'
     );
     const targetB = targetSelect(
       this.document.editor_model.qubits,
-      'Optional second gate target',
+      'Second gate target',
+      true
+    );
+    const targetC = targetSelect(
+      this.document.editor_model.qubits,
+      'Third gate target',
       true
     );
     const theta = document.createElement('input');
@@ -200,19 +208,52 @@ export class DigitalEditorWidget extends Widget {
     theta.placeholder = 'theta';
     theta.setAttribute('aria-label', 'Rotation angle theta');
     theta.hidden = true;
-    gate.addEventListener('change', () => {
+    const configureTargets = (): void => {
       theta.hidden = !ROTATION_GATES.has(gate.value);
-    });
+      targetB.hidden = !(
+        CONTROLLED_TWO_QUBIT_GATES.has(gate.value) ||
+        gate.value === 'swap' ||
+        gate.value === 'ccx'
+      );
+      targetC.hidden = gate.value !== 'ccx';
+      if (CONTROLLED_TWO_QUBIT_GATES.has(gate.value)) {
+        targetA.setAttribute('aria-label', 'Control qubit');
+        targetB.setAttribute('aria-label', 'Target qubit');
+      } else if (gate.value === 'ccx') {
+        targetA.setAttribute('aria-label', 'First control qubit');
+        targetB.setAttribute('aria-label', 'Second control qubit');
+        targetC.setAttribute('aria-label', 'Target qubit');
+      } else if (gate.value === 'swap') {
+        targetA.setAttribute('aria-label', 'First swap qubit');
+        targetB.setAttribute('aria-label', 'Second swap qubit');
+      } else {
+        targetA.setAttribute('aria-label', 'Gate target');
+      }
+      const available = this.document.editor_model.qubits.map(qubit => qubit.id);
+      if (!targetB.hidden && targetB.value === '') {
+        targetB.value = available.find(value => value !== targetA.value) ?? '';
+      }
+      if (!targetC.hidden && targetC.value === '') {
+        targetC.value = available.find(
+          value => value !== targetA.value && value !== targetB.value
+        ) ?? '';
+      }
+    };
+    gate.addEventListener('change', configureTargets);
+    configureTargets();
     const add = commandButton('Add', 'Add gate');
     add.addEventListener('click', () => {
-      const targets = [targetA.value, targetB.value].filter(Boolean);
+      const targets = [targetA, targetB, targetC]
+        .filter(target => !target.hidden)
+        .map(target => target.value)
+        .filter(Boolean);
       const parameters: Record<string, number> = {};
       if (ROTATION_GATES.has(gate.value) && theta.value !== '') {
         parameters.theta = Number(theta.value);
       }
       this.setDocument(addGate(this.document, { gate: gate.value, targets, parameters }));
     });
-    form.append(gate, targetA, targetB, theta, add);
+    form.append(gate, targetA, targetB, targetC, theta, add);
     section.append(form);
     return section;
   }
@@ -233,7 +274,7 @@ export class DigitalEditorWidget extends Widget {
       const name = element('strong');
       name.textContent = gate.gate.toUpperCase();
       const targets = element('span');
-      targets.textContent = gate.targets.join(', ') || 'No target';
+      targets.textContent = gateRoleSummary(gate.gate, gate.targets);
       const parameters = Object.entries(gate.parameters);
       if (parameters.length > 0) {
         targets.textContent += ` | ${parameters.map(([key, value]) => `${key}=${value}`).join(', ')}`;
@@ -327,17 +368,28 @@ export class DigitalEditorWidget extends Widget {
           )
         );
       }
-      targetRows.forEach(row => {
-        const y = 42 + row * 48;
-        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        rect.setAttribute('x', String(x - 22));
-        rect.setAttribute('y', String(y - 16));
-        rect.setAttribute('width', '44');
-        rect.setAttribute('height', '32');
-        rect.setAttribute('rx', '3');
-        rect.setAttribute('class', 'cascaqit-Editor-svgGate');
-        svg.append(rect, svgText(x, y + 4, gate.gate.toUpperCase(), 'cascaqit-Editor-svgGateText'));
-      });
+      const controlled = controlledGate(gate.gate, targetRows);
+      if (controlled !== null) {
+        controlled.controls.forEach(row => {
+          const control = svgCircle(
+            x,
+            42 + row * 48,
+            6,
+            'cascaqit-Editor-svgControl'
+          );
+          control.dataset.role = 'control';
+          svg.append(control);
+        });
+        appendControlledTarget(svg, x, 42 + controlled.target * 48, gate.gate);
+      } else if (gate.gate === 'swap' && targetRows.length >= 2) {
+        targetRows.slice(0, 2).forEach(row => {
+          appendSwap(svg, x, 42 + row * 48);
+        });
+      } else {
+        targetRows.forEach(row => {
+          appendGateBox(svg, x, 42 + row * 48, gate.gate.toUpperCase());
+        });
+      }
     });
     viewport.append(svg);
     section.append(viewport);
@@ -507,10 +559,84 @@ function targetSelect(
   const select = document.createElement('select');
   select.setAttribute('aria-label', label);
   if (optional) {
-    select.append(new Option('No second target', ''));
+    select.append(new Option('Select qubit', ''));
   }
   qubits.forEach(qubit => select.append(new Option(qubit.id, qubit.id)));
   return select;
+}
+
+function gateRoleSummary(gate: string, targets: string[]): string {
+  if (CONTROLLED_TWO_QUBIT_GATES.has(gate) && targets.length >= 2) {
+    return `Control ${targets[0]} -> target ${targets[1]}`;
+  }
+  if (gate === 'ccx' && targets.length >= 3) {
+    return `Controls ${targets[0]}, ${targets[1]} -> target ${targets[2]}`;
+  }
+  if (gate === 'swap' && targets.length >= 2) {
+    return `Swap ${targets[0]} <-> ${targets[1]}`;
+  }
+  return targets.join(', ') || 'No target';
+}
+
+function controlledGate(
+  gate: string,
+  rows: number[]
+): { controls: number[]; target: number } | null {
+  if (CONTROLLED_TWO_QUBIT_GATES.has(gate) && rows.length >= 2) {
+    return { controls: [rows[0]], target: rows[1] };
+  }
+  if (gate === 'ccx' && rows.length >= 3) {
+    return { controls: rows.slice(0, 2), target: rows[2] };
+  }
+  return null;
+}
+
+function appendControlledTarget(
+  svg: SVGSVGElement,
+  x: number,
+  y: number,
+  gate: string
+): void {
+  const targetName = gate === 'ccx' ? 'x' : gate.slice(1);
+  if (targetName === 'x') {
+    const target = svgCircle(x, y, 15, 'cascaqit-Editor-svgTarget');
+    target.dataset.role = 'target';
+    svg.append(
+      target,
+      svgLine(x - 8, y, x + 8, y, 'cascaqit-Editor-svgTargetLine'),
+      svgLine(x, y - 8, x, y + 8, 'cascaqit-Editor-svgTargetLine')
+    );
+    return;
+  }
+  appendGateBox(svg, x, y, targetName.toUpperCase(), 'target');
+}
+
+function appendGateBox(
+  svg: SVGSVGElement,
+  x: number,
+  y: number,
+  label: string,
+  role?: string
+): void {
+  const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  rect.setAttribute('x', String(x - 22));
+  rect.setAttribute('y', String(y - 16));
+  rect.setAttribute('width', '44');
+  rect.setAttribute('height', '32');
+  rect.setAttribute('rx', '3');
+  rect.setAttribute('class', 'cascaqit-Editor-svgGate');
+  if (role !== undefined) {
+    rect.dataset.role = role;
+  }
+  svg.append(rect, svgText(x, y + 4, label, 'cascaqit-Editor-svgGateText'));
+}
+
+function appendSwap(svg: SVGSVGElement, x: number, y: number): void {
+  const first = svgLine(x - 8, y - 8, x + 8, y + 8, 'cascaqit-Editor-svgSwap');
+  const second = svgLine(x - 8, y + 8, x + 8, y - 8, 'cascaqit-Editor-svgSwap');
+  first.dataset.role = 'swap';
+  second.dataset.role = 'swap';
+  svg.append(first, second);
 }
 
 function editorSection(titleText: string): HTMLElement {
@@ -587,6 +713,20 @@ function svgLine(
   line.setAttribute('y2', String(y2));
   line.setAttribute('class', className);
   return line;
+}
+
+function svgCircle(
+  cx: number,
+  cy: number,
+  radius: number,
+  className: string
+): SVGCircleElement {
+  const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  circle.setAttribute('cx', String(cx));
+  circle.setAttribute('cy', String(cy));
+  circle.setAttribute('r', String(radius));
+  circle.setAttribute('class', className);
+  return circle;
 }
 
 function svgText(

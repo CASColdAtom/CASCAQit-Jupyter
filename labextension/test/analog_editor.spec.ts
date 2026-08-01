@@ -10,6 +10,16 @@ vi.mock('@jupyterlab/notebook', () => ({
   }
 }));
 
+vi.mock('../src/bokeh_waveform', () => ({
+  renderBokehWaveforms: vi.fn(async (target: HTMLElement) => {
+    const canvas = document.createElement('canvas');
+    canvas.dataset.testid = 'mock-bokeh-canvas';
+    target.dataset.cascaqitBokehNonempty = 'true';
+    target.append(canvas);
+    return [];
+  })
+}));
+
 let AnalogEditorWidget: typeof import('../src/analog_editor').AnalogEditorWidget;
 
 beforeAll(async () => {
@@ -44,10 +54,43 @@ describe('AnalogEditorWidget', () => {
       editor.node.querySelector('[data-testid="analog-register-preview"] svg')
     ).not.toBeNull();
     expect(
-      editor.node.querySelectorAll(
-        '[data-testid="analog-waveform-preview"] polyline'
-      )
-    ).toHaveLength(3);
+      editor.node.querySelector('[data-testid="analog-waveform-preview"]')
+    ).not.toBeNull();
+    expect(editor.node.textContent).toContain('Array layout');
+  });
+
+  it('applies a parameterized register layout through labeled controls', () => {
+    const editor = new AnalogEditorWidget({
+      panel: () => null,
+      documentId: () => 'document.analog.test'
+    });
+    document.body.append(editor.node);
+
+    const shape = editor.node.querySelector<HTMLSelectElement>(
+      'select[aria-label="Register shape"]'
+    )!;
+    shape.value = 'rectangle';
+    shape.dispatchEvent(new Event('change'));
+    const rows = editor.node.querySelector<HTMLInputElement>(
+      'input[aria-label="Rows"]'
+    )!;
+    const columns = editor.node.querySelector<HTMLInputElement>(
+      'input[aria-label="Columns"]'
+    )!;
+    rows.value = '3';
+    rows.dispatchEvent(new Event('change'));
+    columns.value = '4';
+    columns.dispatchEvent(new Event('change'));
+    editor.node.querySelector<HTMLButtonElement>(
+      'button[aria-label="Apply atom register layout"]'
+    )!.click();
+
+    expect(editor.editorDocument.editor_model.register.sites).toHaveLength(12);
+    expect(editor.editorDocument.editor_model.register.layout_tool).toMatchObject({
+      shape: 'rectangle',
+      rows: 3,
+      columns: 4
+    });
   });
 
   it('edits sites and segments through keyboard-operable controls', () => {

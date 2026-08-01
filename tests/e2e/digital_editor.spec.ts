@@ -30,11 +30,24 @@ test('creates, restores, and detaches a Digital generated cell', async ({
   await expect(editor).toBeVisible();
   await expect(editor.getByTestId('editor-status')).toHaveText('Draft');
 
+  await editor.getByRole('button', { name: 'Add qubit' }).click();
   await editor.getByRole('button', { name: 'Add gate' }).click();
   await editor.getByLabel('Gate', { exact: true }).selectOption('cx');
-  await editor.getByLabel('Optional second gate target').selectOption('q1');
+  await editor.getByLabel('Control qubit').selectOption('q0');
+  await editor.getByLabel('Target qubit').selectOption('q1');
   await editor.getByRole('button', { name: 'Add gate' }).click();
-  await expect(editor.locator('.cascaqit-Editor-gate')).toHaveCount(2);
+  await editor.getByLabel('Gate', { exact: true }).selectOption('ccx');
+  await editor.getByLabel('First control qubit').selectOption('q0');
+  await editor.getByLabel('Second control qubit').selectOption('q1');
+  await editor.getByLabel('Target qubit').selectOption('q2');
+  await editor.getByRole('button', { name: 'Add gate' }).click();
+  await expect(editor.locator('.cascaqit-Editor-gate')).toHaveCount(3);
+  await expect(editor.getByTestId('editor-circuit-preview').locator(
+    '[data-role="control"]'
+  )).toHaveCount(3);
+  await expect(editor.getByTestId('editor-circuit-preview').locator(
+    '[data-role="target"]'
+  )).toHaveCount(2);
 
   await editor.getByTestId('generate-cell').click();
   await expect(editor.getByTestId('editor-status')).toHaveText('Ready');
@@ -84,6 +97,7 @@ test('creates, restores, and detaches a Digital generated cell', async ({
     : savedCell.source;
   expect(savedSource).toContain('circuit.h("q0")');
   expect(savedSource).toContain('circuit.cx("q0", "q1")');
+  expect(savedSource).toContain('circuit.ccx("q0", "q1", "q2")');
   expect(savedCell.metadata.cascaqit_jupyter.editor_document.metadata.last_job)
     .toMatchObject({ state: 'completed', seed: 2026, shots: 32 });
   expect(
@@ -111,7 +125,6 @@ test('creates, restores, and detaches a Digital generated cell', async ({
   await expect(code).toContainText('# user change');
 
   await editor.getByLabel('Gate', { exact: true }).selectOption('x');
-  await editor.getByLabel('Optional second gate target').selectOption('');
   await editor.getByRole('button', { name: 'Add gate' }).click();
   await editor.getByTestId('generate-cell').click();
   await expect(editor.getByTestId('editor-status')).toHaveText('Detached');
@@ -147,7 +160,7 @@ test('creates, restores, and detaches a Digital generated cell', async ({
   expect(editorBounds).not.toBeNull();
   expect(notebookBounds).not.toBeNull();
   expect(editorBounds!.x).toBeLessThan(notebookBounds!.x);
-  expect(geometry.width).toBeGreaterThanOrEqual(desktop ? 560 : 240);
+  expect(geometry.width).toBeGreaterThanOrEqual(desktop ? 680 : 280);
   expect(geometry.columns).toBe(desktop ? 2 : 1);
   expect(geometry.height).toBeGreaterThan(300);
   expect(geometry.noOverflow, JSON.stringify(geometry)).toBe(true);

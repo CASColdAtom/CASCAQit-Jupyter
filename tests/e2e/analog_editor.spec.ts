@@ -32,6 +32,18 @@ test('compiles, runs, restores, validates, and detaches an Analog program', asyn
   await expect(editor.locator('.cascaqit-AnalogEditor-site')).toHaveCount(2);
   await expect(editor.locator('.cascaqit-AnalogEditor-segment')).toHaveCount(5);
 
+  await editor.getByLabel('Register shape').selectOption('rectangle');
+  await editor.getByLabel('Rows').fill('2');
+  await editor.getByLabel('Columns').fill('3');
+  await editor.getByLabel('X spacing (um)').fill('5');
+  await editor.getByLabel('Y spacing (um)').fill('6');
+  await editor.getByLabel('Center x (um)').fill('0');
+  await editor.getByLabel('Center y (um)').fill('0');
+  await editor.getByTestId('apply-register-layout').click();
+  await expect(editor.locator('.cascaqit-AnalogEditor-site')).toHaveCount(6);
+  await expect(editor.getByTestId('analog-waveform-preview').locator('canvas').first())
+    .toBeVisible();
+
   await editor.getByTestId('generate-analog-cell').click();
   await expect(editor.getByTestId('analog-editor-status')).toHaveText('Ready');
   await expect(editor).toContainText('generated Analog code cell synchronized');
@@ -55,6 +67,7 @@ test('compiles, runs, restores, validates, and detaches an Analog program', asyn
   await expect(result).toContainText('Offline deterministic');
   await expect(result).toContainText('32');
   expect(await embeddedResultFits(result)).toBe(true);
+  expect(await rendererHeaderFits(result)).toBe(true);
   await result.evaluate(node => node.scrollIntoView({ block: 'center' }));
   await mkdir('artifacts/screenshots', { recursive: true });
   await editor.screenshot({
@@ -94,8 +107,10 @@ test('compiles, runs, restores, validates, and detaches an Analog program', asyn
   await expect(editor.getByTestId('job-status')).toContainText('jupyter_job.analog.');
   await expect(editor.getByTestId('generate-analog-cell')).toHaveText('Update cell');
 
+  const site0X = Number(await editor.getByLabel('Site s0 x in micrometers').inputValue());
   const siteX = editor.getByLabel('Site s1 x in micrometers');
-  await siteX.fill('1');
+  const site1X = await siteX.inputValue();
+  await siteX.fill(String(site0X + 1));
   await siteX.press('Tab');
   await editor.getByTestId('generate-analog-cell').click();
   await expect(editor.getByTestId('analog-editor-status')).toHaveText('Invalid');
@@ -132,16 +147,20 @@ test('compiles, runs, restores, validates, and detaches an Analog program', asyn
   expect(editorBounds).not.toBeNull();
   expect(notebookBounds).not.toBeNull();
   expect(editorBounds!.x).toBeLessThan(notebookBounds!.x);
-  expect(geometry.width).toBeGreaterThanOrEqual(desktop ? 560 : 240);
+  expect(geometry.width).toBeGreaterThanOrEqual(desktop ? 680 : 280);
   expect(geometry.columns).toBe(desktop ? 2 : 1);
   expect(geometry.height).toBeGreaterThan(500);
   expect(geometry.noOverflow, JSON.stringify(geometry)).toBe(true);
   expect(geometry.controlsFit, JSON.stringify(geometry)).toBe(true);
 
-  for (const testId of ['analog-register-preview', 'analog-waveform-preview']) {
-    const pixels = await visibleSvgPixels(editor.getByTestId(testId).locator('svg'));
-    expect(pixels, testId).toBeGreaterThan(100);
-  }
+  const registerPixels = await visibleSvgPixels(
+    editor.getByTestId('analog-register-preview').locator('svg')
+  );
+  expect(registerPixels, 'analog-register-preview').toBeGreaterThan(100);
+  const waveformPixels = await visibleCanvasPixels(
+    editor.getByTestId('analog-waveform-preview').locator('canvas')
+  );
+  expect(waveformPixels, 'analog-waveform-preview').toBeGreaterThan(100);
   await editor.evaluate(node => node.scrollTo({ top: 0 }));
   await page.screenshot({
     path: `artifacts/screenshots/${testInfo.project.name}-analog-layout.png`
@@ -150,7 +169,7 @@ test('compiles, runs, restores, validates, and detaches an Analog program', asyn
     path: `artifacts/screenshots/${testInfo.project.name}-analog-editor.png`
   });
 
-  await siteX.fill('5');
+  await siteX.fill(site1X);
   await siteX.press('Tab');
   await editor.getByTestId('generate-analog-cell').click();
   await expect(editor.getByTestId('analog-editor-status')).toHaveText('Ready');
@@ -221,6 +240,28 @@ async function visibleSvgPixels(locator: any): Promise<number> {
   });
 }
 
+async function visibleCanvasPixels(locator: any): Promise<number> {
+  return locator.evaluateAll((canvases: HTMLCanvasElement[]) => {
+    return Math.max(0, ...canvases.map(source => {
+      const context = source.getContext('2d');
+      if (context === null || source.width === 0 || source.height === 0) {
+        return 0;
+      }
+      const data = context.getImageData(0, 0, source.width, source.height).data;
+      let visible = 0;
+      for (let index = 0; index < data.length; index += 4) {
+        if (
+          data[index + 3] > 0 &&
+          data[index] + data[index + 1] + data[index + 2] < 735
+        ) {
+          visible += 1;
+        }
+      }
+      return visible;
+    }));
+  });
+}
+
 async function openAnalogEditor(page: any): Promise<void> {
   await expect(async () => {
     await page.locator('.jp-Notebook:visible').focus();
@@ -241,6 +282,22 @@ async function embeddedResultFits(result: any): Promise<boolean> {
           rect.right <= bounds.right + 1 &&
           item.scrollWidth <= item.clientWidth + 1;
       });
+  });
+}
+
+async function rendererHeaderFits(result: any): Promise<boolean> {
+  return result.locator('.cascaqit-Renderer-header').evaluate((header: HTMLElement) => {
+    const bounds = header.getBoundingClientRect();
+    const title = header.firstElementChild?.getBoundingClientRect();
+    const identity = header.lastElementChild?.getBoundingClientRect();
+    if (title === undefined || identity === undefined) {
+      return false;
+    }
+    const separated = title.bottom <= identity.top ||
+      identity.bottom <= title.top ||
+      title.right <= identity.left;
+    return separated && identity.left >= bounds.left - 1 &&
+      identity.right <= bounds.right + 1;
   });
 }
 

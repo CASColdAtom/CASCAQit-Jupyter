@@ -8,14 +8,17 @@
   border-radius: 4px;
   background: var(--jp-layout-color1, #fff);
   color: var(--jp-ui-font-color1, #202124);
+  container-name: cascaqit-renderer;
+  container-type: inline-size;
   font-family: var(--jp-ui-font-family, system-ui, sans-serif);
 }
 
 .cascaqit-Editor {
   box-sizing: border-box;
   width: 100%;
-  min-width: min(600px, 48vw);
+  min-width: clamp(280px, 58vw, 720px);
   max-width: 100%;
+  height: 100%;
   overflow: auto;
   background: var(--jp-layout-color1, #fff);
   color: var(--jp-ui-font-color1, #202124);
@@ -31,7 +34,7 @@
 }
 
 #jp-left-stack:has(.cascaqit-Editor) {
-  min-width: min(600px, 48vw);
+  min-width: clamp(280px, 58vw, 720px);
 }
 
 .cascaqit-Editor-header {
@@ -244,6 +247,22 @@
   stroke-width: 1.5;
 }
 
+.cascaqit-Editor-svgControl {
+  fill: #30343b;
+}
+
+.cascaqit-Editor-svgTarget {
+  fill: var(--jp-layout-color1, #fff);
+  stroke: #30343b;
+  stroke-width: 2;
+}
+
+.cascaqit-Editor-svgTargetLine,
+.cascaqit-Editor-svgSwap {
+  stroke: #30343b;
+  stroke-width: 2;
+}
+
 .cascaqit-Editor-svgLabel,
 .cascaqit-Editor-svgGateText {
   fill: var(--jp-ui-font-color1, #202124);
@@ -370,6 +389,46 @@
   margin-bottom: 8px;
 }
 
+.cascaqit-AnalogEditor-layoutTool {
+  min-width: 0;
+  margin: 0 0 10px;
+  padding: 8px;
+  border: 1px solid var(--jp-border-color2, #c9cdd3);
+}
+
+.cascaqit-AnalogEditor-layoutTool legend {
+  padding: 0 4px;
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 16px;
+}
+
+.cascaqit-AnalogEditor-layoutFields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+  gap: 7px;
+  margin-bottom: 8px;
+}
+
+.cascaqit-AnalogEditor-layoutFields label {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+  color: var(--jp-ui-font-color2, #50555c);
+  font-size: 10px;
+  line-height: 14px;
+}
+
+.cascaqit-AnalogEditor-layoutFields input,
+.cascaqit-AnalogEditor-layoutFields select {
+  width: 100%;
+  min-width: 0;
+}
+
+.cascaqit-AnalogEditor-layoutTool > button {
+  width: 100%;
+}
+
 .cascaqit-AnalogEditor-site,
 .cascaqit-AnalogEditor-segment {
   display: grid;
@@ -485,9 +544,20 @@
   stroke: #00796b;
 }
 
-@container cascaqit-editor (min-width: 560px) {
+.cascaqit-AnalogEditor-bokeh {
+  min-height: 414px;
+  overflow: hidden;
+}
+
+.cascaqit-AnalogEditor-bokeh > div,
+.cascaqit-AnalogEditor-bokeh .bk-GridPlot {
+  width: 100%;
+  max-width: 100%;
+}
+
+@container cascaqit-editor (min-width: 680px) {
   .cascaqit-Editor-body {
-    grid-template-columns: minmax(260px, 0.9fr) minmax(300px, 1.1fr);
+    grid-template-columns: minmax(370px, 1.2fr) minmax(300px, 0.8fr);
   }
 
   .cascaqit-Editor-column--authoring {
@@ -535,6 +605,11 @@
   background: var(--jp-layout-color2, #f6f7f8);
 }
 
+.cascaqit-Renderer-header > :first-child {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
 .cascaqit-Renderer-eyebrow {
   color: #00796b;
   font-size: 10px;
@@ -553,6 +628,8 @@
 .cascaqit-Renderer-identity {
   display: flex;
   min-width: 0;
+  max-width: min(50%, 420px);
+  flex: 0 1 420px;
   flex-direction: column;
   align-items: flex-end;
   color: var(--jp-ui-font-color2, #5f6368);
@@ -562,10 +639,26 @@
 
 .cascaqit-Renderer-identity span,
 .cascaqit-Renderer-identity code {
-  max-width: min(42vw, 420px);
+  width: 100%;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+@container cascaqit-renderer (max-width: 420px) {
+  .cascaqit-Renderer-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .cascaqit-Renderer-identity {
+    width: 100%;
+    max-width: 100%;
+    flex-basis: auto;
+    align-items: flex-start;
+  }
 }
 
 .cascaqit-Renderer-identity code,
@@ -728,6 +821,11 @@
 }
 
 .cascaqit-Svg-targetLine {
+  stroke: #30343b;
+  stroke-width: 2;
+}
+
+.cascaqit-Svg-swap {
   stroke: #30343b;
   stroke-width: 2;
 }

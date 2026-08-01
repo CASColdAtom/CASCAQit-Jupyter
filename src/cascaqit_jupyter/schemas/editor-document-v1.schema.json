@@ -170,6 +170,7 @@
           "required": ["coordinate_unit", "sites"],
           "properties": {
             "coordinate_unit": { "const": "um" },
+            "layout_tool": { "$ref": "#/$defs/analogRegisterLayout" },
             "sites": {
               "type": "array",
               "minItems": 1,
@@ -205,6 +206,36 @@
             "enabled": { "type": "boolean" }
           }
         }
+      }
+    },
+    "analogRegisterLayout": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "shape",
+        "atom_count",
+        "rows",
+        "columns",
+        "spacing_x",
+        "spacing_y",
+        "radius",
+        "rings",
+        "center_x",
+        "center_y"
+      ],
+      "properties": {
+        "shape": {
+          "enum": ["custom", "line", "rectangle", "triangle", "ring", "hexagonal"]
+        },
+        "atom_count": { "type": "integer", "minimum": 1, "maximum": 100 },
+        "rows": { "type": "integer", "minimum": 1, "maximum": 20 },
+        "columns": { "type": "integer", "minimum": 1, "maximum": 20 },
+        "spacing_x": { "type": "number", "exclusiveMinimum": 0 },
+        "spacing_y": { "type": "number", "exclusiveMinimum": 0 },
+        "radius": { "type": "number", "exclusiveMinimum": 0 },
+        "rings": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "center_x": { "type": "number" },
+        "center_y": { "type": "number" }
       }
     },
     "hybridModel": {

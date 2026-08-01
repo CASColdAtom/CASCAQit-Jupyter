@@ -137,16 +137,28 @@ function renderDigitalProgram(root: HTMLElement, data: JsonRecord): void {
     if (targetIndexes.length === 0) {
       return;
     }
-    if (name === 'CX' && targetIndexes.length >= 2) {
-      const controlY = 48 + targetIndexes[0] * 48;
-      const targetY = 48 + targetIndexes[1] * 48;
+    const controlCount = name === 'CCX'
+      ? 2
+      : ['CX', 'CY', 'CZ'].includes(name) ? 1 : 0;
+    if (controlCount > 0 && targetIndexes.length >= controlCount + 1) {
+      const controls = targetIndexes.slice(0, controlCount);
+      const target = targetIndexes[controlCount];
+      const allRows = [...controls, target];
       svg.append(
-        svgLine(x, controlY, x, targetY, 'cascaqit-Svg-connector'),
-        svgCircle(x, controlY, 5, 'cascaqit-Svg-control'),
-        svgCircle(x, targetY, 15, 'cascaqit-Svg-target'),
-        svgLine(x - 8, targetY, x + 8, targetY, 'cascaqit-Svg-targetLine'),
-        svgLine(x, targetY - 8, x, targetY + 8, 'cascaqit-Svg-targetLine')
+        svgLine(
+          x,
+          48 + Math.min(...allRows) * 48,
+          x,
+          48 + Math.max(...allRows) * 48,
+          'cascaqit-Svg-connector'
+        )
       );
+      controls.forEach(row => {
+        const control = svgCircle(x, 48 + row * 48, 5, 'cascaqit-Svg-control');
+        control.dataset.role = 'control';
+        svg.append(control);
+      });
+      appendControlledGateTarget(svg, x, 48 + target * 48, name);
       return;
     }
     const first = Math.min(...targetIndexes);
@@ -155,6 +167,12 @@ function renderDigitalProgram(root: HTMLElement, data: JsonRecord): void {
       svg.append(
         svgLine(x, 48 + first * 48, x, 48 + last * 48, 'cascaqit-Svg-connector')
       );
+    }
+    if (name === 'SWAP' && targetIndexes.length >= 2) {
+      targetIndexes.slice(0, 2).forEach(index => {
+        appendSwapTarget(svg, x, 48 + index * 48);
+      });
+      return;
     }
     targetIndexes.forEach(index => appendGate(svg, x, 48 + index * 48, name));
   });
@@ -640,6 +658,36 @@ function appendGate(
     svgRect(x - 19, y - 17, 38, 34, measurement ? 'cascaqit-Svg-measure' : 'cascaqit-Svg-gate'),
     svgText(x, y + 5, name, 'cascaqit-Svg-gateText')
   );
+}
+
+function appendControlledGateTarget(
+  svg: SVGSVGElement,
+  x: number,
+  y: number,
+  name: string
+): void {
+  const targetName = name === 'CCX' ? 'X' : name.slice(1);
+  if (targetName !== 'X') {
+    const rect = svgRect(x - 19, y - 17, 38, 34, 'cascaqit-Svg-gate');
+    rect.dataset.role = 'target';
+    svg.append(rect, svgText(x, y + 5, targetName, 'cascaqit-Svg-gateText'));
+    return;
+  }
+  const target = svgCircle(x, y, 15, 'cascaqit-Svg-target');
+  target.dataset.role = 'target';
+  svg.append(
+    target,
+    svgLine(x - 8, y, x + 8, y, 'cascaqit-Svg-targetLine'),
+    svgLine(x, y - 8, x, y + 8, 'cascaqit-Svg-targetLine')
+  );
+}
+
+function appendSwapTarget(svg: SVGSVGElement, x: number, y: number): void {
+  const first = svgLine(x - 8, y - 8, x + 8, y + 8, 'cascaqit-Svg-swap');
+  const second = svgLine(x - 8, y + 8, x + 8, y - 8, 'cascaqit-Svg-swap');
+  first.dataset.role = 'swap';
+  second.dataset.role = 'swap';
+  svg.append(first, second);
 }
 
 function svgElement<K extends keyof SVGElementTagNameMap>(

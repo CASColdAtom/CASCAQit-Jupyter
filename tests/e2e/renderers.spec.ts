@@ -91,6 +91,24 @@ test('renders every read-only domain view without overflow or executable markup'
     })
   );
   expect(headersDoNotOverlap).toBe(true);
+  const resultHeadersFit = await renderers
+    .filter({ has: page.locator('.cascaqit-Renderer-title', { hasText: /^Result$/ }) })
+    .evaluateAll(nodes => nodes.every(node => {
+      const header = node.querySelector<HTMLElement>('.cascaqit-Renderer-header');
+      const identity = node.querySelector<HTMLElement>('.cascaqit-Renderer-identity');
+      const hash = identity?.querySelector<HTMLElement>('code');
+      if (header === null || identity === null || hash === undefined || hash === null) {
+        return false;
+      }
+      const headerBounds = header.getBoundingClientRect();
+      const identityBounds = identity.getBoundingClientRect();
+      const hashBounds = hash.getBoundingClientRect();
+      return identityBounds.left >= headerBounds.left - 1 &&
+        identityBounds.right <= headerBounds.right + 1 &&
+        hashBounds.left >= identityBounds.left - 1 &&
+        hashBounds.right <= identityBounds.right + 1;
+    }));
+  expect(resultHeadersFit).toBe(true);
 
   const analogGrid = renderers.filter({ hasText: 'program.e2e.analog' }).locator(
     '.cascaqit-Renderer-domainGrid'
