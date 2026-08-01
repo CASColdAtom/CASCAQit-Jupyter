@@ -14,11 +14,13 @@
 .cascaqit-Editor {
   box-sizing: border-box;
   width: 100%;
-  min-width: 240px;
+  min-width: min(600px, 48vw);
   max-width: 100%;
   overflow: auto;
   background: var(--jp-layout-color1, #fff);
   color: var(--jp-ui-font-color1, #202124);
+  container-name: cascaqit-editor;
+  container-type: inline-size;
   font-family: var(--jp-ui-font-family, system-ui, sans-serif);
 }
 
@@ -26,6 +28,10 @@
 .cascaqit-Editor *::before,
 .cascaqit-Editor *::after {
   box-sizing: border-box;
+}
+
+#jp-left-stack:has(.cascaqit-Editor) {
+  min-width: min(600px, 48vw);
 }
 
 .cascaqit-Editor-header {
@@ -79,7 +85,13 @@
 }
 
 .cascaqit-Editor-body {
+  display: grid;
   width: 100%;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.cascaqit-Editor-column {
   min-width: 0;
 }
 
@@ -263,6 +275,7 @@
   position: sticky;
   bottom: 0;
   display: flex;
+  grid-column: 1 / -1;
   justify-content: flex-end;
   padding: 10px 12px;
   background: var(--jp-layout-color2, #f6f7f8);
@@ -470,6 +483,20 @@
 
 .cascaqit-AnalogEditor-wave.is-phase {
   stroke: #00796b;
+}
+
+@container cascaqit-editor (min-width: 560px) {
+  .cascaqit-Editor-body {
+    grid-template-columns: minmax(260px, 0.9fr) minmax(300px, 1.1fr);
+  }
+
+  .cascaqit-Editor-column--authoring {
+    border-right: 1px solid var(--jp-border-color2, #c9cdd3);
+  }
+
+  .cascaqit-Editor-message {
+    grid-column: 1 / -1;
+  }
 }
 
 @media (max-width: 520px) {

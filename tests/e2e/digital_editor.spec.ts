@@ -8,6 +8,7 @@ test('creates, restores, and detaches a Digital generated cell', async ({
   request
 }, testInfo) => {
   const notebookFrontend = testInfo.project.name.startsWith('notebook');
+  const desktop = testInfo.project.name.endsWith('desktop');
   const workspace = `cascaqit-editor-${testInfo.project.name}`;
   const route = notebookFrontend ? 'tree' : `lab/workspaces/${workspace}/tree`;
   const notebookPath = `artifacts/e2e-${testInfo.project.name}.ipynb`;
@@ -120,9 +121,13 @@ test('creates, restores, and detaches a Digital generated cell', async ({
 
   const geometry = await editor.evaluate(node => {
     const rect = node.getBoundingClientRect();
+    const body = node.querySelector<HTMLElement>('.cascaqit-Editor-body');
     return {
       width: rect.width,
       height: rect.height,
+      columns: body === null
+        ? 0
+        : getComputedStyle(body).gridTemplateColumns.trim().split(/\s+/).length,
       noOverflow: node.scrollWidth <= node.clientWidth + 1,
       controlsFit: Array.from(node.querySelectorAll('button, input, select'))
         .filter(control => !(control as HTMLElement).hidden)
@@ -135,7 +140,15 @@ test('creates, restores, and detaches a Digital generated cell', async ({
         })
     };
   });
-  expect(geometry.width).toBeGreaterThanOrEqual(240);
+  const [editorBounds, notebookBounds] = await Promise.all([
+    editor.boundingBox(),
+    page.locator('.jp-Notebook:visible').boundingBox()
+  ]);
+  expect(editorBounds).not.toBeNull();
+  expect(notebookBounds).not.toBeNull();
+  expect(editorBounds!.x).toBeLessThan(notebookBounds!.x);
+  expect(geometry.width).toBeGreaterThanOrEqual(desktop ? 560 : 240);
+  expect(geometry.columns).toBe(desktop ? 2 : 1);
   expect(geometry.height).toBeGreaterThan(300);
   expect(geometry.noOverflow, JSON.stringify(geometry)).toBe(true);
   expect(geometry.controlsFit, JSON.stringify(geometry)).toBe(true);
@@ -190,6 +203,10 @@ test('creates, restores, and detaches a Digital generated cell', async ({
     });
   expect(visiblePixels).toBeGreaterThan(100);
 
+  await editor.evaluate(node => node.scrollTo({ top: 0 }));
+  await page.screenshot({
+    path: `artifacts/screenshots/${testInfo.project.name}-digital-layout.png`
+  });
   await editor.screenshot({
     path: `artifacts/screenshots/${testInfo.project.name}-digital-editor.png`
   });

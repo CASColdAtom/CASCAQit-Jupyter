@@ -95,14 +95,28 @@ export class DigitalEditorWidget extends Widget {
     const fragment = document.createDocumentFragment();
     fragment.append(this.renderHeader());
 
-    const body = element('div', 'cascaqit-Editor-body');
-    body.append(
+    const body = element('div', 'cascaqit-Editor-body is-digital');
+    const authoring = element(
+      'div',
+      'cascaqit-Editor-column cascaqit-Editor-column--authoring'
+    );
+    authoring.append(
       this.renderQubits(),
       this.renderGateComposer(),
       this.renderGateSequence(),
-      this.renderMeasurement(),
+      this.renderMeasurement()
+    );
+    const inspection = element(
+      'div',
+      'cascaqit-Editor-column cascaqit-Editor-column--inspection'
+    );
+    inspection.append(
       this.renderPreview(),
-      this.renderJob(),
+      this.renderJob()
+    );
+    body.append(
+      authoring,
+      inspection,
       this.renderDiagnostics(),
       this.renderActions()
     );

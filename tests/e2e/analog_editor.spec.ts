@@ -8,6 +8,7 @@ test('compiles, runs, restores, validates, and detaches an Analog program', asyn
   request
 }, testInfo) => {
   const notebookFrontend = testInfo.project.name.startsWith('notebook');
+  const desktop = testInfo.project.name.endsWith('desktop');
   const workspace = `cascaqit-analog-${testInfo.project.name}`;
   const route = notebookFrontend ? 'tree' : `lab/workspaces/${workspace}/tree`;
   const notebookPath = `artifacts/analog-${testInfo.project.name}.ipynb`;
@@ -104,21 +105,35 @@ test('compiles, runs, restores, validates, and detaches an Analog program', asyn
   ).toHaveClass(/has-diagnostic/);
   await expect(editor.locator('.cascaqit-AnalogEditor-site.has-diagnostic')).toHaveCount(0);
 
-  const geometry = await editor.evaluate(node => ({
-    width: node.getBoundingClientRect().width,
-    height: node.getBoundingClientRect().height,
-    noOverflow: node.scrollWidth <= node.clientWidth + 1,
-    controlsFit: Array.from(node.querySelectorAll('button, input'))
-      .filter(control => !(control as HTMLElement).hidden)
-      .every(control => {
-        const box = control.getBoundingClientRect();
-        if (control instanceof HTMLInputElement && control.type === 'checkbox') {
-          return box.width >= 12 && box.height >= 12;
-        }
-        return box.width > 20 && box.height >= 26;
-      })
-  }));
-  expect(geometry.width).toBeGreaterThanOrEqual(240);
+  const geometry = await editor.evaluate(node => {
+    const body = node.querySelector<HTMLElement>('.cascaqit-Editor-body');
+    return {
+      width: node.getBoundingClientRect().width,
+      height: node.getBoundingClientRect().height,
+      columns: body === null
+        ? 0
+        : getComputedStyle(body).gridTemplateColumns.trim().split(/\s+/).length,
+      noOverflow: node.scrollWidth <= node.clientWidth + 1,
+      controlsFit: Array.from(node.querySelectorAll('button, input'))
+        .filter(control => !(control as HTMLElement).hidden)
+        .every(control => {
+          const box = control.getBoundingClientRect();
+          if (control instanceof HTMLInputElement && control.type === 'checkbox') {
+            return box.width >= 12 && box.height >= 12;
+          }
+          return box.width > 20 && box.height >= 26;
+        })
+    };
+  });
+  const [editorBounds, notebookBounds] = await Promise.all([
+    editor.boundingBox(),
+    page.locator('.jp-Notebook:visible').boundingBox()
+  ]);
+  expect(editorBounds).not.toBeNull();
+  expect(notebookBounds).not.toBeNull();
+  expect(editorBounds!.x).toBeLessThan(notebookBounds!.x);
+  expect(geometry.width).toBeGreaterThanOrEqual(desktop ? 560 : 240);
+  expect(geometry.columns).toBe(desktop ? 2 : 1);
   expect(geometry.height).toBeGreaterThan(500);
   expect(geometry.noOverflow, JSON.stringify(geometry)).toBe(true);
   expect(geometry.controlsFit, JSON.stringify(geometry)).toBe(true);
@@ -127,6 +142,10 @@ test('compiles, runs, restores, validates, and detaches an Analog program', asyn
     const pixels = await visibleSvgPixels(editor.getByTestId(testId).locator('svg'));
     expect(pixels, testId).toBeGreaterThan(100);
   }
+  await editor.evaluate(node => node.scrollTo({ top: 0 }));
+  await page.screenshot({
+    path: `artifacts/screenshots/${testInfo.project.name}-analog-layout.png`
+  });
   await editor.screenshot({
     path: `artifacts/screenshots/${testInfo.project.name}-analog-editor.png`
   });

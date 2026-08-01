@@ -68,6 +68,8 @@ display(display_visualization(build_counts_histogram(result)))
 
 打开带有 Python 内核的 Notebook，在工具栏中选择 **Digital**。也可以在命令面板运行 `CASCAQit: Open Digital Editor`，或在 Notebook 获得焦点时按 `Alt+Shift+Q`。
 
+编辑器会平铺在 Notebook 左侧：桌面宽度下至少保留 560 px，并将配置与预览/本地运行分成两列；窄屏或用户缩小窗格时自动回到单列。JupyterLab 使用主工作区分栏，Notebook 7 使用加宽的左侧窗格。
+
 编辑器支持增加和重命名量子比特、添加及调整量子门顺序、设置末端测量，然后用 **Generate cell** 生成普通的 CASCAQit Python 代码。当前支持 `H`、`X`、`Y`、`Z`、`RX`、`RY`、`RZ`、`CX`、`CZ` 和 `SWAP`；旋转参数必须是数值，生成前必须启用末端测量。[`examples/digital_editor.ipynb`](examples/digital_editor.ipynb) 可以直接用于体验编辑流程。
 
 ## 可视化编辑 Analog 程序

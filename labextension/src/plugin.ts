@@ -21,12 +21,32 @@ const plugin: JupyterFrontEndPlugin<void> = {
   ): void => {
     let digitalEditor: DigitalEditorWidget | null = null;
     let analogEditor: AnalogEditorWidget | null = null;
+    const addEditorToWorkspace = (
+      editor: DigitalEditorWidget | AnalogEditorWidget,
+      peer: DigitalEditorWidget | AnalogEditorWidget | null,
+      rank: number
+    ): void => {
+      if (app.name === 'Jupyter Notebook') {
+        app.shell.add(editor, 'left', { rank });
+        return;
+      }
+      const livePeer = peer !== null && !peer.isDisposed ? peer : null;
+      const reference = livePeer?.id ?? notebooks.currentWidget?.id;
+      if (reference === undefined) {
+        app.shell.add(editor, 'main');
+        return;
+      }
+      app.shell.add(editor, 'main', {
+        mode: livePeer === null ? 'split-left' : 'tab-after',
+        ref: reference
+      });
+    };
     const openDigital = async (): Promise<void> => {
       if (digitalEditor === null || digitalEditor.isDisposed) {
         digitalEditor = new DigitalEditorWidget({
           panel: () => notebooks.currentWidget
         });
-        app.shell.add(digitalEditor, 'left', { rank: 900 });
+        addEditorToWorkspace(digitalEditor, analogEditor, 900);
       }
       await digitalEditor.bindPanel(notebooks.currentWidget);
       app.shell.activateById(digitalEditor.id);
@@ -36,7 +56,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
         analogEditor = new AnalogEditorWidget({
           panel: () => notebooks.currentWidget
         });
-        app.shell.add(analogEditor, 'left', { rank: 901 });
+        addEditorToWorkspace(analogEditor, digitalEditor, 901);
       }
       await analogEditor.bindPanel(notebooks.currentWidget);
       app.shell.activateById(analogEditor.id);
