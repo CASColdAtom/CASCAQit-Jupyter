@@ -15,10 +15,6 @@ interface BokehPlot {
 
 interface BokehPlottingApi {
   figure(options: Record<string, unknown>): BokehPlot;
-  gridplot(
-    plots: BokehPlot[],
-    options: Record<string, unknown>
-  ): unknown;
   show(
     layout: unknown,
     target: HTMLElement
@@ -29,6 +25,12 @@ const COLORS: Record<AnalogChannel, string> = {
   rabi: '#255bb8',
   detuning: '#a65300',
   phase: '#00796b'
+};
+
+const LINE_DASHES: Record<AnalogChannel, string> = {
+  rabi: 'solid',
+  detuning: 'dashed',
+  phase: 'dotdash'
 };
 
 export async function renderBokehWaveforms(
@@ -49,27 +51,26 @@ export async function renderBokehWaveforms(
       return [];
     }
     stage = 'figure creation';
-    const plots = channels.map(({ channel, segments }, index) => {
-      stage = `${channel} figure creation`;
-      const points = waveformPoints(segments);
-      const plot = Plotting.figure({
-        title: channelLabel(channel),
-        height: 138,
-        sizing_mode: 'stretch_width',
-        tools: 'pan,wheel_zoom,box_zoom,reset,save',
-        active_scroll: 'wheel_zoom',
-        toolbar_location: null,
-        x_axis_label: index === channels.length - 1 ? 'Time (us)' : null,
-        y_axis_label: channel === 'phase' ? 'rad' : 'rad/us',
-        min_border_left: 58,
-        min_border_right: 12,
-        min_border_top: 28,
-        min_border_bottom: index === channels.length - 1 ? 42 : 24,
-        background_fill_color: '#ffffff',
-        border_fill_color: '#ffffff',
-        outline_line_color: '#c9cdd3'
-      });
+    const plot = Plotting.figure({
+      title: 'Global controls',
+      height: 320,
+      sizing_mode: 'stretch_width',
+      tools: 'pan,wheel_zoom,box_zoom,reset,save',
+      active_scroll: 'wheel_zoom',
+      toolbar_location: 'right',
+      x_axis_label: 'Time (us)',
+      y_axis_label: 'Control value (rad or rad/us)',
+      min_border_left: 64,
+      min_border_right: 12,
+      min_border_top: 32,
+      min_border_bottom: 44,
+      background_fill_color: '#ffffff',
+      border_fill_color: '#ffffff',
+      outline_line_color: '#c9cdd3'
+    });
+    channels.forEach(({ channel, segments }) => {
       stage = `${channel} glyph creation`;
+      const points = waveformPoints(segments);
       plot.line(
         points.map(point => point.time),
         points.map(point => point.value),
@@ -77,22 +78,17 @@ export async function renderBokehWaveforms(
           line_color: COLORS[channel],
           line_width: 2.5,
           line_cap: 'round',
-          line_join: 'round'
+          line_join: 'round',
+          line_dash: LINE_DASHES[channel],
+          legend_label: channelLabel(channel)
         }
       );
-      stage = `${channel} figure completion`;
-      return plot;
-    });
-    stage = 'layout creation';
-    const layout = Plotting.gridplot(plots, {
-      ncols: 1,
-      toolbar_location: 'right',
-      merge_tools: true,
-      sizing_mode: 'stretch_width'
     });
     stage = 'DOM mounting';
-    const view = await Plotting.show(layout, target);
+    const view = await Plotting.show(plot, target);
     target.dataset.cascaqitBokehNonempty = 'true';
+    target.dataset.cascaqitBokehPlots = '1';
+    target.dataset.cascaqitBokehChannels = String(channels.length);
     return Array.isArray(view) ? view : [view];
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

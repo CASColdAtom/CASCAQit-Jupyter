@@ -160,7 +160,7 @@ test('creates, restores, and detaches a Digital generated cell', async ({
   expect(editorBounds).not.toBeNull();
   expect(notebookBounds).not.toBeNull();
   expect(editorBounds!.x).toBeLessThan(notebookBounds!.x);
-  expect(geometry.width).toBeGreaterThanOrEqual(desktop ? 680 : 280);
+  expect(geometry.width).toBeGreaterThanOrEqual(desktop ? 900 : 280);
   expect(geometry.columns).toBe(desktop ? 2 : 1);
   expect(geometry.height).toBeGreaterThan(300);
   expect(geometry.noOverflow, JSON.stringify(geometry)).toBe(true);

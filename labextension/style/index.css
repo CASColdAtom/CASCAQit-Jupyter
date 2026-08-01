@@ -16,7 +16,7 @@
 .cascaqit-Editor {
   box-sizing: border-box;
   width: 100%;
-  min-width: clamp(280px, 58vw, 720px);
+  min-width: clamp(280px, 68vw, 1080px);
   max-width: 100%;
   height: 100%;
   overflow: auto;
@@ -34,7 +34,8 @@
 }
 
 #jp-left-stack:has(.cascaqit-Editor) {
-  min-width: clamp(280px, 58vw, 720px);
+  width: clamp(280px, 68vw, 1080px);
+  min-width: clamp(280px, 68vw, 1080px);
 }
 
 .cascaqit-Editor-header {
@@ -545,19 +546,27 @@
 }
 
 .cascaqit-AnalogEditor-bokeh {
-  min-height: 414px;
+  min-height: 320px;
   overflow: hidden;
 }
 
 .cascaqit-AnalogEditor-bokeh > div,
-.cascaqit-AnalogEditor-bokeh .bk-GridPlot {
+.cascaqit-AnalogEditor-bokeh .bk-Canvas {
   width: 100%;
   max-width: 100%;
 }
 
-@container cascaqit-editor (min-width: 680px) {
+@media (max-width: 900px) {
+  .cascaqit-Editor,
+  #jp-left-stack:has(.cascaqit-Editor) {
+    width: min(58vw, 420px);
+    min-width: min(58vw, 420px);
+  }
+}
+
+@container cascaqit-editor (min-width: 860px) {
   .cascaqit-Editor-body {
-    grid-template-columns: minmax(370px, 1.2fr) minmax(300px, 0.8fr);
+    grid-template-columns: minmax(420px, 1fr) minmax(420px, 1fr);
   }
 
   .cascaqit-Editor-column--authoring {

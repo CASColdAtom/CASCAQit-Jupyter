@@ -43,6 +43,10 @@ test('compiles, runs, restores, validates, and detaches an Analog program', asyn
   await expect(editor.locator('.cascaqit-AnalogEditor-site')).toHaveCount(6);
   await expect(editor.getByTestId('analog-waveform-preview').locator('canvas').first())
     .toBeVisible();
+  await expect(editor.getByTestId('analog-waveform-preview'))
+    .toHaveAttribute('data-cascaqit-bokeh-plots', '1');
+  await expect(editor.getByTestId('analog-waveform-preview'))
+    .toHaveAttribute('data-cascaqit-bokeh-channels', '3');
 
   await editor.getByTestId('generate-analog-cell').click();
   await expect(editor.getByTestId('analog-editor-status')).toHaveText('Ready');
@@ -122,6 +126,9 @@ test('compiles, runs, restores, validates, and detaches an Analog program', asyn
 
   const geometry = await editor.evaluate(node => {
     const body = node.querySelector<HTMLElement>('.cascaqit-Editor-body');
+    const previews = Array.from(
+      node.querySelectorAll<HTMLElement>('.cascaqit-Editor-preview')
+    );
     return {
       width: node.getBoundingClientRect().width,
       height: node.getBoundingClientRect().height,
@@ -129,6 +136,9 @@ test('compiles, runs, restores, validates, and detaches an Analog program', asyn
         ? 0
         : getComputedStyle(body).gridTemplateColumns.trim().split(/\s+/).length,
       noOverflow: node.scrollWidth <= node.clientWidth + 1,
+      previewsFit: previews.every(
+        preview => preview.scrollWidth <= preview.clientWidth + 1
+      ),
       controlsFit: Array.from(node.querySelectorAll('button, input'))
         .filter(control => !(control as HTMLElement).hidden)
         .every(control => {
@@ -147,10 +157,13 @@ test('compiles, runs, restores, validates, and detaches an Analog program', asyn
   expect(editorBounds).not.toBeNull();
   expect(notebookBounds).not.toBeNull();
   expect(editorBounds!.x).toBeLessThan(notebookBounds!.x);
-  expect(geometry.width).toBeGreaterThanOrEqual(desktop ? 680 : 280);
+  expect(geometry.width).toBeGreaterThanOrEqual(desktop ? 900 : 280);
   expect(geometry.columns).toBe(desktop ? 2 : 1);
   expect(geometry.height).toBeGreaterThan(500);
   expect(geometry.noOverflow, JSON.stringify(geometry)).toBe(true);
+  if (desktop) {
+    expect(geometry.previewsFit, JSON.stringify(geometry)).toBe(true);
+  }
   expect(geometry.controlsFit, JSON.stringify(geometry)).toBe(true);
 
   const registerPixels = await visibleSvgPixels(
