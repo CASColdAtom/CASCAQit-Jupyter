@@ -64,6 +64,12 @@ display(display_visualization(build_counts_histogram(result)))
 
 [`examples/read_only_renderers.ipynb`](examples/read_only_renderers.ipynb) 包含当前全部只读视图的离线示例。渲染器只用受控的 DOM 和 SVG 元素显示版本化 JSON 数据；诊断信息中的 HTML 或 JavaScript 会作为文本显示，不会执行。
 
+## Code Cell 自动补全
+
+Notebook 的 Code Cell 在编辑时会使用 JupyterLab 原生 kernel 和 context provider（内核与上下文补全源）显示候选。输入代码后会自动弹出建议；也可以按 `Ctrl+Space` 主动触发，或继续使用 Jupyter 的标准 `Tab` 补全。
+
+Notebook 工具栏中的补全图标用于开启或关闭自动提示，状态写入 JupyterLab 的 Code Completion 设置。没有既有用户设置时默认开启；如果用户已经明确关闭，则扩展不会覆盖该选择。手动触发仍只在当前 Notebook 的 Code Cell 编辑态生效。
+
 ## 可视化编辑 Digital 程序
 
 打开带有 Python 内核的 Notebook，在工具栏中选择 **Digital**。也可以在命令面板运行 `CASCAQit: Open Digital Editor`，或在 Notebook 获得焦点时按 `Alt+Shift+Q`。

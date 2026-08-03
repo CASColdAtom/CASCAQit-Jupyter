@@ -1,28 +1,44 @@
 import { JupyterFrontEnd, JupyterFrontEndPlugin } from '@jupyterlab/application';
 import { ICommandPalette, ToolbarButton } from '@jupyterlab/apputils';
+import {
+  completerWidgetIcon,
+  ICompletionProviderManager
+} from '@jupyterlab/completer';
 import { INotebookTracker, NotebookPanel } from '@jupyterlab/notebook';
+import { ISettingRegistry } from '@jupyterlab/settingregistry';
 import { MessageLoop } from '@lumino/messaging';
 import { SplitPanel, Widget } from '@lumino/widgets';
 
 import '../labextension/style/index.css';
 import { AnalogEditorWidget } from './analog_editor';
+import {
+  CodeCompletionController,
+  installCodeCompletionAutoInvoke,
+  invokeCodeCompletion,
+  isCodeCellEditing
+} from './code_completion';
 import { DigitalEditorWidget } from './digital_editor';
 
 const DIGITAL_COMMAND = 'cascaqit:open-digital-editor';
 const ANALOG_COMMAND = 'cascaqit:open-analog-editor';
+const TOGGLE_COMPLETION_COMMAND = 'cascaqit:toggle-code-autocompletion';
+const INVOKE_COMPLETION_COMMAND = 'cascaqit:invoke-code-completion';
 
 const plugin: JupyterFrontEndPlugin<void> = {
   id: '@cascaqit/jupyter:digital-editor',
   autoStart: true,
-  requires: [INotebookTracker],
+  requires: [INotebookTracker, ISettingRegistry, ICompletionProviderManager],
   optional: [ICommandPalette],
   activate: (
     app: JupyterFrontEnd,
     notebooks: INotebookTracker,
+    settingRegistry: ISettingRegistry,
+    completionManager: ICompletionProviderManager,
     palette: ICommandPalette | null
   ): void => {
     let digitalEditor: DigitalEditorWidget | null = null;
     let analogEditor: AnalogEditorWidget | null = null;
+    const completion = new CodeCompletionController(settingRegistry);
     const addEditorToWorkspace = (
       editor: DigitalEditorWidget | AnalogEditorWidget,
       rank: number
@@ -65,6 +81,24 @@ const plugin: JupyterFrontEndPlugin<void> = {
       isEnabled: () => notebooks.currentWidget !== null,
       execute: openAnalog
     });
+    app.commands.addCommand(TOGGLE_COMPLETION_COMMAND, {
+      label: () =>
+        `CASCAQit: ${completion.enabled ? 'Disable' : 'Enable'} Code Autocompletion`,
+      caption: 'Toggle automatic suggestions while editing notebook Code Cells',
+      icon: completerWidgetIcon,
+      isEnabled: () => completion.initialized,
+      isToggled: () => completion.enabled,
+      execute: async () => {
+        await completion.toggle();
+      }
+    });
+    app.commands.addCommand(INVOKE_COMPLETION_COMMAND, {
+      label: 'CASCAQit: Invoke Code Completion',
+      caption: 'Show completion suggestions for the active notebook Code Cell',
+      icon: completerWidgetIcon,
+      isEnabled: () => isCodeCellEditing(notebooks.currentWidget),
+      execute: () => invokeCodeCompletion(notebooks.currentWidget, completionManager)
+    });
     app.commands.addKeyBinding({
       command: DIGITAL_COMMAND,
       keys: ['Alt Shift Q'],
@@ -75,8 +109,24 @@ const plugin: JupyterFrontEndPlugin<void> = {
       keys: ['Alt Shift A'],
       selector: '.jp-Notebook'
     });
+    app.commands.addKeyBinding({
+      command: INVOKE_COMPLETION_COMMAND,
+      keys: ['Ctrl Space'],
+      selector: '.jp-Notebook.jp-mod-editMode .jp-CodeCell .cm-content'
+    });
     palette?.addItem({ command: DIGITAL_COMMAND, category: 'CASCAQit' });
     palette?.addItem({ command: ANALOG_COMMAND, category: 'CASCAQit' });
+    palette?.addItem({ command: TOGGLE_COMPLETION_COMMAND, category: 'CASCAQit' });
+    palette?.addItem({ command: INVOKE_COMPLETION_COMMAND, category: 'CASCAQit' });
+
+    const completionButtons = new Set<ToolbarButton>();
+    completion.changed.connect(() => {
+      completionButtons.forEach(button => {
+        button.enabled = completion.initialized;
+        button.pressed = completion.enabled;
+      });
+      app.commands.notifyCommandChanged(TOGGLE_COMPLETION_COMMAND);
+    });
 
     const addToolbarButton = (panel: NotebookPanel): void => {
       panel.toolbar.insertItem(
@@ -97,9 +147,32 @@ const plugin: JupyterFrontEndPlugin<void> = {
           onClick: () => void openAnalog()
         })
       );
+      const completionButton = new ToolbarButton({
+        icon: completerWidgetIcon,
+        tooltip: 'Enable automatic Code Cell completion',
+        pressedTooltip: 'Disable automatic Code Cell completion',
+        pressed: completion.enabled,
+        enabled: completion.initialized,
+        dataset: { testid: 'toggle-code-autocompletion' },
+        onClick: () => void app.commands.execute(TOGGLE_COMPLETION_COMMAND)
+      });
+      panel.toolbar.insertItem(
+        12,
+        'cascaqitCodeAutocompletion',
+        completionButton
+      );
+      completionButtons.add(completionButton);
+      panel.disposed.connect(() => completionButtons.delete(completionButton));
     };
     notebooks.forEach(addToolbarButton);
     notebooks.widgetAdded.connect((_sender, panel) => addToolbarButton(panel));
+    installCodeCompletionAutoInvoke(notebooks, completion, completionManager);
+
+    void app.restored
+      .then(() => completion.initialize())
+      .catch(error => {
+        console.error('Failed to initialize Code Cell autocompletion.', error);
+      });
   }
 };
 
