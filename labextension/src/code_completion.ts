@@ -7,6 +7,12 @@ export const COMPLETER_SETTINGS_PLUGIN =
   '@jupyterlab/completer-extension:manager';
 export const AUTO_COMPLETION_SETTING = 'autoCompletion';
 
+const COMPLETION_INSERT_TYPES = new Set([
+  'insertText',
+  'insertCompositionText',
+  'insertFromComposition'
+]);
+
 export class CodeCompletionController {
   constructor(private readonly registry: ISettingRegistry) {}
 
@@ -80,6 +86,18 @@ export function invokeCodeCompletion(
   }
 }
 
+export function isCompletionTriggerInput(event: Event): boolean {
+  const input = event as Partial<InputEvent>;
+  return (
+    typeof input.inputType === 'string' &&
+    COMPLETION_INSERT_TYPES.has(input.inputType) &&
+    input.isComposing !== true &&
+    typeof input.data === 'string' &&
+    input.data.trim() !== '' &&
+    Array.from(input.data).length === 1
+  );
+}
+
 export function installCodeCompletionAutoInvoke(
   notebooks: INotebookTracker,
   completion: Pick<CodeCompletionController, 'enabled' | 'initialized'>,
@@ -87,33 +105,43 @@ export function installCodeCompletionAutoInvoke(
   delay = 180
 ): () => void {
   let timer: ReturnType<typeof setTimeout> | undefined;
+  const clearPending = (): void => {
+    if (timer !== undefined) {
+      clearTimeout(timer);
+      timer = undefined;
+    }
+  };
   const onInput = (event: Event): void => {
-    const input = event as InputEvent;
     const target = event.target;
     const panel = notebooks.currentWidget;
     if (
+      !(target instanceof Element) ||
+      panel === null ||
+      !panel.node.contains(target)
+    ) {
+      return;
+    }
+
+    clearPending();
+    if (
       !completion.initialized ||
       !completion.enabled ||
-      !(target instanceof Element) ||
-      !input.inputType.startsWith('insert') ||
-      input.isComposing ||
-      input.data?.trim() === '' ||
-      panel === null ||
-      !panel.node.contains(target) ||
+      !isCompletionTriggerInput(event) ||
       target.closest('.jp-CodeCell .cm-content') === null ||
       !isCodeCellEditing(panel)
     ) {
       return;
     }
 
-    if (timer !== undefined) {
-      clearTimeout(timer);
-    }
+    const cell = panel.content.activeCell;
     timer = setTimeout(() => {
       timer = undefined;
       if (
         completion.enabled &&
         notebooks.currentWidget === panel &&
+        panel.content.activeCell === cell &&
+        target.isConnected &&
+        panel.node.contains(target) &&
         isCodeCellEditing(panel) &&
         document.querySelector('.jp-Completer:not(.lm-mod-hidden)') === null
       ) {
@@ -125,8 +153,6 @@ export function installCodeCompletionAutoInvoke(
   document.addEventListener('input', onInput, true);
   return () => {
     document.removeEventListener('input', onInput, true);
-    if (timer !== undefined) {
-      clearTimeout(timer);
-    }
+    clearPending();
   };
 }

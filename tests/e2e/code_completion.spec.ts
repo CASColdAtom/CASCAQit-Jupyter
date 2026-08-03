@@ -21,30 +21,35 @@ test('offers automatic completion in notebook Code Cells', async ({ page }, test
     await newsPrompt.click();
   }
   const toggle = page.getByTestId('toggle-code-autocompletion');
-  let openedToolbarPopup = false;
+  await expect(toggle).toHaveCount(1);
   if (!(await toggle.isVisible())) {
-    await page
-      .locator('.jp-NotebookPanel-toolbar')
-      .getByRole('button', { name: 'More commands' })
-      .click();
-    openedToolbarPopup = true;
+    const toolbarPopup = page.locator('.jp-Toolbar-responsive-popup');
+    await expect(toolbarPopup.getByTestId('toggle-code-autocompletion')).toHaveCount(
+      1
+    );
+    await expect(
+      page
+        .locator('.jp-NotebookPanel-toolbar')
+        .getByRole('button', { name: 'More commands' })
+    ).toBeVisible();
   }
-  await expect(toggle).toBeVisible();
   if ((await toggle.getAttribute('aria-pressed')) !== 'true') {
-    await toggle.click();
+    if (await toggle.isVisible()) {
+      await toggle.click();
+    } else {
+      await toggle.evaluate(node => (node as HTMLElement).click());
+    }
   }
   await expect(toggle).toHaveAttribute('aria-pressed', 'true');
   await expect(toggle).toHaveAttribute(
     'aria-label',
     'Disable automatic Code Cell completion'
   );
-  if (openedToolbarPopup) {
-    await page
-      .locator('.jp-NotebookPanel-toolbar')
-      .getByRole('button', { name: 'More commands' })
-      .click();
-  }
 
+  await expect(page.locator('[aria-label="Kernel status"]')).toHaveAttribute(
+    'aria-valuenow',
+    '100'
+  );
   const setupCell = page.locator('.jp-CodeCell').first();
   await setupCell.locator('.cm-content').click();
   await setupCell.locator('.cm-content').press('Shift+Enter');

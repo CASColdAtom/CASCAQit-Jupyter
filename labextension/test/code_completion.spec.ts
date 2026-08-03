@@ -12,6 +12,7 @@ import {
   COMPLETER_SETTINGS_PLUGIN,
   invokeCodeCompletion,
   installCodeCompletionAutoInvoke,
+  isCompletionTriggerInput,
   isCodeCellEditing
 } from '../src/code_completion';
 
@@ -105,6 +106,26 @@ describe('CodeCompletionController', () => {
 });
 
 describe('code completion invocation', () => {
+  it('only classifies a single committed text character as automatic input', () => {
+    expect(isCompletionTriggerInput(inputEvent('insertText', '.'))).toBe(true);
+    expect(
+      isCompletionTriggerInput(inputEvent('insertCompositionText', '中'))
+    ).toBe(true);
+    expect(
+      isCompletionTriggerInput(inputEvent('insertCompositionText', '中', true))
+    ).toBe(false);
+    expect(isCompletionTriggerInput(inputEvent('insertText', 'Circuit'))).toBe(
+      false
+    );
+    expect(isCompletionTriggerInput(inputEvent('insertFromPaste', 'x'))).toBe(
+      false
+    );
+    expect(
+      isCompletionTriggerInput(inputEvent('deleteContentBackward', null))
+    ).toBe(false);
+    expect(isCompletionTriggerInput(new Event('input'))).toBe(false);
+  });
+
   it('only invokes the active notebook panel while editing a Code Cell', () => {
     const manager = { invoke: vi.fn() } as unknown as ICompletionProviderManager;
     const codePanel = panelFor('code', 'edit');
@@ -153,4 +174,52 @@ describe('code completion invocation', () => {
     host.remove();
     vi.useRealTimers();
   });
+
+  it('cancels a queued invocation after deletion or an active Cell change', async () => {
+    vi.useFakeTimers();
+    const host = document.createElement('div');
+    host.innerHTML =
+      '<div class="jp-Notebook jp-mod-editMode"><div class="jp-CodeCell"><div class="cm-content"></div></div></div>';
+    document.body.append(host);
+    const content = host.querySelector<HTMLElement>('.cm-content')!;
+    const panel = panelFor('code', 'edit');
+    Object.defineProperty(panel, 'node', { value: host });
+    const notebooks = { currentWidget: panel } as unknown as INotebookTracker;
+    const manager = { invoke: vi.fn() } as unknown as ICompletionProviderManager;
+    const uninstall = installCodeCompletionAutoInvoke(
+      notebooks,
+      { enabled: true, initialized: true },
+      manager,
+      20
+    );
+
+    content.dispatchEvent(inputEvent('insertText', 'x'));
+    content.dispatchEvent(inputEvent('deleteContentBackward', null));
+    await vi.advanceTimersByTimeAsync(20);
+    expect(manager.invoke).not.toHaveBeenCalled();
+
+    content.dispatchEvent(inputEvent('insertText', 'y'));
+    Object.defineProperty(panel.content, 'activeCell', {
+      value: panelFor('code', 'edit').content.activeCell
+    });
+    await vi.advanceTimersByTimeAsync(20);
+    expect(manager.invoke).not.toHaveBeenCalled();
+
+    uninstall();
+    host.remove();
+    vi.useRealTimers();
+  });
 });
+
+function inputEvent(
+  inputType: string,
+  data: string | null,
+  isComposing = false
+): InputEvent {
+  return new InputEvent('input', {
+    bubbles: true,
+    data,
+    inputType,
+    isComposing
+  });
+}
