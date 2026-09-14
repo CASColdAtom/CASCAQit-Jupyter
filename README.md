@@ -64,6 +64,8 @@ display(display_visualization(build_counts_histogram(result)))
 
 [`examples/read_only_renderers.ipynb`](examples/read_only_renderers.ipynb) 包含当前全部只读视图的离线示例。渲染器只用受控的 DOM 和 SVG 元素显示版本化 JSON 数据；诊断信息中的 HTML 或 JavaScript 会作为文本显示，不会执行。
 
+[`examples/quantum_visualization_demo.ipynb`](examples/quantum_visualization_demo.ipynb) 提供一个可从头运行的三量子比特 GHZ 态示例，使用固定 shots 和 seed 在本地模拟器执行。每个显示接口作为 Code Cell 的最后一个表达式时，会直接在当前 Notebook 输出区渲染量子线路、Result 和计数直方图，不需要调用 `IPython.display.display` 或打开外部窗口。
+
 ## Code Cell 自动补全
 
 Notebook 的 Code Cell 在编辑时会使用 JupyterLab 原生 kernel 和 context provider（内核与上下文补全源）显示候选。输入代码后会自动弹出建议；也可以按 `Ctrl+Space` 主动触发，或继续使用 Jupyter 的标准 `Tab` 补全。
