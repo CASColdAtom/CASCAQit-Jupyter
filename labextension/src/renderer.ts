@@ -112,9 +112,12 @@ function renderDigitalProgram(root: HTMLElement, data: JsonRecord): void {
     return;
   }
 
-  const section = viewSection('Circuit', `${qubits.length} qubits | ${gates.length} gates`);
+  const section = viewSection(
+    'Circuit',
+    `${qubits.length} qubits | ${gates.length} gates | ${measurements.length} measurements`
+  );
   const viewport = element('div', 'cascaqit-Renderer-circuitViewport');
-  const width = Math.max(560, 150 + (gates.length + 1) * 82);
+  const width = Math.max(560, 150 + (gates.length + measurements.length) * 82);
   const height = 54 + qubits.length * 48;
   const svg = createSvg(width, height, 'Digital quantum circuit');
   svg.dataset.testid = 'digital-circuit';
@@ -129,22 +132,38 @@ function renderDigitalProgram(root: HTMLElement, data: JsonRecord): void {
 
   gates.forEach((gate, gateIndex) => {
     const x = 112 + gateIndex * 82;
-    const targets = asArray(gate.targets).map(value => text(value, ''));
     const name = text(gate.name, '?').toUpperCase();
-    const targetIndexes = targets
-      .map(target => qubits.indexOf(target))
-      .filter(index => index >= 0);
+    const gateId = text(gate.gate_id, `gate.${gateIndex}`);
+    const targetNames = qubitNames(gate.targets);
+    const explicitControlNames = qubitNames(gate.controls);
+    const controlCount = controlledGateArity(name);
+    const controlNames = explicitControlNames.length > 0
+      ? explicitControlNames
+      : targetNames.slice(0, controlCount);
+    const actualTargetNames = explicitControlNames.length > 0
+      ? targetNames.filter(target => !explicitControlNames.includes(target))
+      : targetNames.slice(controlCount);
+    const controlIndexes = qubitIndexes(controlNames, qubits);
+    const targetIndexes = qubitIndexes(actualTargetNames, qubits);
     if (targetIndexes.length === 0) {
       return;
     }
-    const controlCount = name === 'CCX'
-      ? 2
-      : ['CX', 'CY', 'CZ'].includes(name) ? 1 : 0;
-    if (controlCount > 0 && targetIndexes.length >= controlCount + 1) {
-      const controls = targetIndexes.slice(0, controlCount);
-      const target = targetIndexes[controlCount];
-      const allRows = [...controls, target];
-      svg.append(
+    const operation = svgElement('g');
+    operation.setAttribute('class', 'cascaqit-Svg-operation');
+    operation.dataset.gateId = gateId;
+    operation.dataset.gateName = name.toLowerCase();
+    operation.setAttribute(
+      'aria-label',
+      gateDescription(name, controlNames, actualTargetNames)
+    );
+    const operationTitle = svgElement('title');
+    operationTitle.textContent = gateDescription(name, controlNames, actualTargetNames);
+    operation.append(operationTitle);
+    svg.append(operation);
+
+    if (controlIndexes.length > 0) {
+      const allRows = [...controlIndexes, ...targetIndexes];
+      operation.append(
         svgLine(
           x,
           48 + Math.min(...allRows) * 48,
@@ -153,42 +172,86 @@ function renderDigitalProgram(root: HTMLElement, data: JsonRecord): void {
           'cascaqit-Svg-connector'
         )
       );
-      controls.forEach(row => {
+      controlIndexes.forEach(row => {
         const control = svgCircle(x, 48 + row * 48, 5, 'cascaqit-Svg-control');
         control.dataset.role = 'control';
-        svg.append(control);
+        operation.append(control);
       });
-      appendControlledGateTarget(svg, x, 48 + target * 48, name);
+      targetIndexes.forEach(row => {
+        appendControlledGateTarget(operation, x, 48 + row * 48, name);
+      });
       return;
     }
     const first = Math.min(...targetIndexes);
     const last = Math.max(...targetIndexes);
     if (last > first) {
-      svg.append(
+      operation.append(
         svgLine(x, 48 + first * 48, x, 48 + last * 48, 'cascaqit-Svg-connector')
       );
     }
     if (name === 'SWAP' && targetIndexes.length >= 2) {
       targetIndexes.slice(0, 2).forEach(index => {
-        appendSwapTarget(svg, x, 48 + index * 48);
+        appendSwapTarget(operation, x, 48 + index * 48);
       });
       return;
     }
-    targetIndexes.forEach(index => appendGate(svg, x, 48 + index * 48, name));
+    targetIndexes.forEach(index => appendGate(operation, x, 48 + index * 48, name));
   });
 
-  const measureX = 112 + gates.length * 82;
-  const measured = new Set(
-    measurements.flatMap(item => asArray(item.targets).map(value => text(value, '')))
-  );
-  qubits.forEach((qubit, index) => {
-    if (measured.has(qubit)) {
-      appendGate(svg, measureX, 48 + index * 48, 'M', true);
-    }
+  measurements.forEach((measurement, measurementIndex) => {
+    const x = 112 + (gates.length + measurementIndex) * 82;
+    const targetNames = qubitNames(measurement.targets);
+    const targetIndexes = qubitIndexes(targetNames, qubits);
+    const operation = svgElement('g');
+    operation.setAttribute('class', 'cascaqit-Svg-operation');
+    operation.dataset.measurementId = text(
+      measurement.measurement_id,
+      `measurement.${measurementIndex}`
+    );
+    operation.dataset.operation = 'measurement';
+    const label = `Measure ${targetNames.join(', ') || 'no qubits'}`;
+    operation.setAttribute('aria-label', label);
+    const operationTitle = svgElement('title');
+    operationTitle.textContent = label;
+    operation.append(operationTitle);
+    targetIndexes.forEach(index => {
+      appendGate(operation, x, 48 + index * 48, 'M', true);
+    });
+    svg.append(operation);
   });
   viewport.append(svg);
   section.append(viewport);
   root.append(section);
+}
+
+function qubitNames(value: unknown): string[] {
+  return asArray(value)
+    .map(item => text(item, ''))
+    .filter(item => item.length > 0);
+}
+
+function qubitIndexes(names: string[], qubits: string[]): number[] {
+  return names
+    .map(name => qubits.indexOf(name))
+    .filter(index => index >= 0);
+}
+
+function controlledGateArity(name: string): number {
+  if (name === 'CCX') {
+    return 2;
+  }
+  return ['CX', 'CY', 'CZ'].includes(name) ? 1 : 0;
+}
+
+function gateDescription(
+  name: string,
+  controls: string[],
+  targets: string[]
+): string {
+  const targetLabel = targets.join(', ') || 'no targets';
+  return controls.length > 0
+    ? `${name} gate: controls ${controls.join(', ')}; targets ${targetLabel}`
+    : `${name} gate: targets ${targetLabel}`;
 }
 
 function renderAnalogProgram(root: HTMLElement, data: JsonRecord): void {
@@ -648,7 +711,7 @@ function createSvg(width: number, height: number, title: string): SVGSVGElement 
 }
 
 function appendGate(
-  svg: SVGSVGElement,
+  svg: SVGElement,
   x: number,
   y: number,
   name: string,
@@ -661,12 +724,12 @@ function appendGate(
 }
 
 function appendControlledGateTarget(
-  svg: SVGSVGElement,
+  svg: SVGElement,
   x: number,
   y: number,
   name: string
 ): void {
-  const targetName = name === 'CCX' ? 'X' : name.slice(1);
+  const targetName = controlledTargetName(name);
   if (targetName !== 'X') {
     const rect = svgRect(x - 19, y - 17, 38, 34, 'cascaqit-Svg-gate');
     rect.dataset.role = 'target';
@@ -682,7 +745,20 @@ function appendControlledGateTarget(
   );
 }
 
-function appendSwapTarget(svg: SVGSVGElement, x: number, y: number): void {
+function controlledTargetName(name: string): string {
+  if (name === 'CCX' || name === 'CX' || name === 'X') {
+    return 'X';
+  }
+  if (name === 'CY' || name === 'Y') {
+    return 'Y';
+  }
+  if (name === 'CZ' || name === 'Z') {
+    return 'Z';
+  }
+  return name;
+}
+
+function appendSwapTarget(svg: SVGElement, x: number, y: number): void {
   const first = svgLine(x - 8, y - 8, x + 8, y + 8, 'cascaqit-Svg-swap');
   const second = svgLine(x - 8, y + 8, x + 8, y - 8, 'cascaqit-Svg-swap');
   first.dataset.role = 'swap';

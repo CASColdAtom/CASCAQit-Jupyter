@@ -33,6 +33,14 @@ test('renders every read-only domain view without overflow or executable markup'
   await expect(page.getByTestId('register-plot')).toHaveCount(2);
   await expect(page.getByTestId('pulse-plot')).toHaveCount(2);
 
+  const digitalCircuit = page.getByTestId('digital-circuit');
+  await expect(digitalCircuit.locator('[data-gate-name="h"]')).toHaveCount(1);
+  await expect(digitalCircuit.locator('[data-gate-name="cx"]')).toHaveCount(1);
+  await expect(digitalCircuit.locator('[data-role="control"]')).toHaveCount(1);
+  await expect(digitalCircuit.locator('[data-role="target"]')).toHaveCount(1);
+  await expect(digitalCircuit.locator('[data-operation="measurement"]')).toHaveCount(1);
+  await expect(digitalCircuit.locator('.cascaqit-Svg-measure')).toHaveCount(2);
+
   const securityDiagnostic = page.locator('.cascaqit-Diagnostic', {
     hasText: 'E2E_UNTRUSTED_TEXT'
   });

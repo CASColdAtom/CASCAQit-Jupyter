@@ -60,9 +60,65 @@ describe('CASCAQit renderer', () => {
     expect(svg?.getAttribute('viewBox')).toMatch(/^0 0 \d+ \d+$/);
     expect(svg?.dataset.cascaqitNonempty).toBe('true');
     expect(node.textContent).toContain('q0');
+    expect(node.textContent).toContain('4 gates | 1 measurements');
+    expect(
+      Array.from(node.querySelectorAll<SVGGElement>('[data-gate-name]')).map(
+        gate => gate.dataset.gateName
+      )
+    ).toEqual(['h', 'cx', 'ccx', 'cz']);
     expect(node.querySelectorAll('[data-role="control"]')).toHaveLength(4);
     expect(node.querySelectorAll('[data-role="target"]')).toHaveLength(3);
     expect(node.querySelectorAll('.cascaqit-Svg-target')).toHaveLength(2);
+    expect(node.querySelectorAll('.cascaqit-Svg-measure')).toHaveLength(3);
+    expect(node.querySelector('[data-operation="measurement"]')).not.toBeNull();
+  });
+
+  it('renders explicit public GateIR controls separately from targets', () => {
+    const node = root();
+    renderPayload(
+      node,
+      PROGRAM_MIME,
+      payload('program', {
+        schema_version: '0.1',
+        program_type: 'digital',
+        validation_mode: 'ir_only',
+        circuit: {
+          qubits: ['q0', 'q1', 'q2'],
+          gates: [
+            { gate_id: 'g-h', name: 'h', targets: ['q0'], controls: [] },
+            { gate_id: 'g-cx', name: 'cx', targets: ['q1'], controls: ['q0'] },
+            {
+              gate_id: 'g-ccx',
+              name: 'ccx',
+              targets: ['q2'],
+              controls: ['q0', 'q1']
+            }
+          ],
+          measurements: [
+            { measurement_id: 'm0', targets: ['q0'], key: 'first' },
+            { measurement_id: 'm1', targets: ['q1', 'q2'], key: 'rest' }
+          ]
+        }
+      })
+    );
+
+    const operations = Array.from(
+      node.querySelectorAll<SVGGElement>('[data-gate-name]')
+    );
+    expect(operations.map(gate => gate.dataset.gateId)).toEqual([
+      'g-h',
+      'g-cx',
+      'g-ccx'
+    ]);
+    expect(operations[1].getAttribute('aria-label')).toBe(
+      'CX gate: controls q0; targets q1'
+    );
+    expect(operations[2].getAttribute('aria-label')).toBe(
+      'CCX gate: controls q0, q1; targets q2'
+    );
+    expect(node.querySelectorAll('[data-role="control"]')).toHaveLength(3);
+    expect(node.querySelectorAll('.cascaqit-Svg-target')).toHaveLength(2);
+    expect(node.querySelectorAll('[data-operation="measurement"]')).toHaveLength(2);
     expect(node.querySelectorAll('.cascaqit-Svg-measure')).toHaveLength(3);
   });
 
