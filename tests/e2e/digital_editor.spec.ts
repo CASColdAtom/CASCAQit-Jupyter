@@ -31,6 +31,13 @@ test('creates, restores, and detaches a Digital generated cell', async ({
   const editor = page.locator('.cascaqit-Editor');
   await expect(editor).toBeVisible();
   await expect(editor.getByTestId('editor-status')).toHaveText('Draft');
+  const measurements = editor.getByTestId('editor-circuit-preview').locator('[data-role="measurement"]');
+  await expect(editor.getByTestId('terminal-measurement')).toBeChecked();
+  await expect(measurements).toHaveCount(2);
+  await editor.getByTestId('terminal-measurement').uncheck();
+  await expect(measurements).toHaveCount(0);
+  await editor.getByTestId('terminal-measurement').check();
+  await expect(measurements).toHaveCount(2);
   const cloudSkin = await editor.evaluate(node => {
     const root = getComputedStyle(node);
     const header = getComputedStyle(
@@ -54,6 +61,7 @@ test('creates, restores, and detaches a Digital generated cell', async ({
   }
 
   await editor.getByRole('button', { name: 'Add qubit' }).click();
+  await expect(measurements).toHaveCount(3);
   const secondQubit = editor.getByLabel('Qubit 2 ID');
   await secondQubit.fill('q0');
   await secondQubit.press('Tab');

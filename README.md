@@ -11,6 +11,9 @@ CASCAQit-Jupyter 为 JupyterLab 4 和 Notebook 7 提供 CASCAQit 中性原子量
 两个模板，每次创建一个新的 Notebook，不覆盖已有文件。内核就绪后点击 **运行全部**，
 即可直接查看程序图形和离线模拟结果。
 
+首页提供实验线路缩略图、项目根目录最近修改的 Notebook 和当前开发环境状态；
+可以直接打开已有文件、浏览项目或启动终端。
+
 每个 Notebook 顶部提供以下入口：
 
 | 入口 | 当前能力 |
@@ -119,6 +122,9 @@ Notebook 的 Code Cell 在编辑时会使用 JupyterLab 原生 kernel 和 contex
 Notebook 工具栏中的补全图标用于开启或关闭自动提示，状态写入 JupyterLab 的 Code Completion 设置。没有既有用户设置时默认开启；如果用户已经明确关闭，则扩展不会覆盖该选择。手动触发仍只在当前 Notebook 的 Code Cell 编辑态生效。
 
 ## 可视化编辑 Digital 程序
+
+新建线路默认对所有量子比特启用末端测量，预览在每根线路末端显示 `M`。
+增加、删除量子比特或切换 Terminal measurement 时，预览同步更新。
 
 打开带有 Python 内核的 Notebook，在工具栏中选择 **Digital**。也可以在命令面板运行 `CASCAQit: Open Digital Editor`，或在 Notebook 获得焦点时按 `Alt+Shift+Q`。
 

@@ -9,6 +9,7 @@ import { Widget } from '@lumino/widgets';
 
 import { renderPayload } from './renderer';
 import { workbenchRuns } from './workbench_runs';
+import { createWorkbenchHome } from './workbench_home';
 
 const HOME = 'cascaqit:workbench';
 const settings = ServerConnection.makeSettings();
@@ -318,6 +319,7 @@ const workbenchPlugin: JupyterFrontEndPlugin<void> = {
     documents: IDocumentManager, palette: ICommandPalette | null,
     launcher: ILauncher | null, labShell: ILabShell | null): void => {
     let home: Widget | null = null;
+    let refreshHome: (() => Promise<void>) | null = null;
     const attach = (panel: NotebookPanel): void => {
       new NotebookWorkspace(app, panel, labShell);
     };
@@ -332,70 +334,12 @@ const workbenchPlugin: JupyterFrontEndPlugin<void> = {
           return;
         }
         if (home === null || home.isDisposed) {
-          home = new Widget();
-          home.id = 'cascaqit-workbench';
-          home.title.label = '量子工作台';
-          home.title.closable = true;
-          home.addClass('cascaqit-Workbench');
-          const hero = node('header', 'cascaqit-Workbench-hero');
-          hero.append(node('p', 'cascaqit-Workbench-eyebrow', 'CASCAQit / QUANTUM WORKSPACE'));
-          hero.append(node('h1', '', '让量子实验，从这里开始。'));
-          hero.append(node('p', '', '写代码，编排线路，观察结果。在同一个工作空间完成你的探索。'));
-          const badges = node('div', 'cascaqit-Workbench-badges');
-          badges.append(node('span', '', 'Python + Notebook'), node('span', '', '本地模拟'),
-            node('span', '', 'Digital / Analog'));
-          hero.append(badges);
-          home.node.append(hero);
-          const content = node('div', 'cascaqit-Workbench-content');
-          content.append(node('h2', '', '从一个可运行实验开始'));
-          const grid = node('div', 'cascaqit-Workbench-grid');
-          const feedback = node('p', 'cascaqit-Workbench-feedback');
-          feedback.setAttribute('role', 'status');
-          for (const [kind, title, subtitle, illustration] of [
-            ['digital', 'Bell 纠缠实验', '两量子比特 · H / CX 门 · 测量分布', 'H ── ● ── M\n     │\n──── ⊕ ── M'],
-            ['analog', '双原子 Analog 实验', '原子寄存器 · Rabi / Detuning · 本地模拟', '◉ ─── 5 μm ─── ◉\n\n▁▂▃▄▅▆▅▄▃▂▁']
-          ]) {
-            const card = node('article', 'cascaqit-Workbench-card');
-            card.append(node('pre', `cascaqit-Workbench-art is-${kind}`, illustration));
-            card.append(node('h3', '', title), node('p', '', subtitle));
-            const create = button(`创建${kind === 'digital' ? ' Digital' : ' Analog'} 实验`, async () => {
-              create.disabled = true;
-              feedback.textContent = '正在创建独立 Notebook…';
-              try {
-                const template = await workbenchRequest(`templates/${kind}`);
-                const model = await app.serviceManager.contents.newUntitled({ type: 'notebook' });
-                await app.serviceManager.contents.save(model.path, {
-                  type: 'notebook', format: 'json', content: template
-                });
-                const widget = documents.openOrReveal(model.path);
-                if (widget === undefined) { throw new Error('无法打开创建的 Notebook。'); }
-                feedback.textContent = `已创建 ${model.path}。内核就绪后点击“运行全部”。`;
-              } catch (error) { feedback.textContent = String(error); }
-              finally { create.disabled = false; }
-            });
-            create.classList.add('is-primary');
-            card.append(create);
-            grid.append(card);
-          }
-          content.append(grid, feedback, node('h2', '', '你的工作方式'));
-          const guide = node('div', 'cascaqit-Workbench-guide');
-          for (const [title, detail] of [
-            ['01 / 探索', 'Notebook 逐步运行，线路与结果直接显示。'],
-            ['02 / 编排', 'Digital / Analog 可视化编辑，生成可读的 Python。'],
-            ['03 / 开发', 'Code 打开同一目录，使用终端、搜索与 Git。'],
-            ['04 / 展示', '演示模式保留输出，随时回到代码。']
-          ]) {
-            const item = node('section');
-            item.append(node('h3', '', title), node('p', '', detail));
-            guide.append(item);
-          }
-          content.append(guide);
-          if (app.commands.hasCommand('terminal:create-new')) {
-            content.append(button('打开终端', () => app.commands.execute('terminal:create-new')));
-          }
-          home.node.append(content);
+          const created = createWorkbenchHome(app, documents, workbenchRequest);
+          home = created.widget;
+          refreshHome = created.refresh;
           app.shell.add(home, 'main');
         }
+        void refreshHome?.();
         app.shell.activateById(home.id);
         labShell?.collapseLeft();
         return home;

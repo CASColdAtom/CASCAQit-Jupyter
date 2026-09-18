@@ -303,6 +303,7 @@ export class DigitalEditorWidget extends Widget {
     const terminalLabel = document.createElement('label');
     const terminal = document.createElement('input');
     terminal.type = 'checkbox';
+    terminal.dataset.testid = 'terminal-measurement';
     terminal.checked = this.document.editor_model.measurement.terminal;
     terminal.addEventListener('change', () => {
       this.setDocument(
@@ -329,6 +330,11 @@ export class DigitalEditorWidget extends Widget {
     });
     fields.append(terminalLabel, key);
     section.append(fields);
+    const hint = element('p', 'cascaqit-Editor-measurementHint');
+    hint.textContent = this.document.editor_model.measurement.terminal
+        ? '已启用末端测量：对全部量子比特测量，预览中的 M 对应 measure_all()。'
+        : '末端测量已关闭；生成并运行采样线路前请重新启用。';
+    section.append(hint);
     return section;
   }
 
@@ -339,11 +345,12 @@ export class DigitalEditorWidget extends Widget {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     const qubits = this.document.editor_model.qubits;
     const gates = this.document.editor_model.gates;
-    const width = Math.max(420, 140 + gates.length * 82);
+    const measurement = this.document.editor_model.measurement;
+    const width = Math.max(420, 140 + (gates.length + (measurement.terminal ? 1 : 0)) * 82);
     const height = Math.max(96, 52 + qubits.length * 48);
     svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
     svg.setAttribute('role', 'img');
-    svg.setAttribute('aria-label', `${qubits.length} qubit Digital circuit preview`);
+    svg.setAttribute('aria-label', `${qubits.length} qubit Digital circuit preview${measurement.terminal ? ', terminal measurement on all qubits' : ', no measurement'}`);
     svg.dataset.cascaqitNonempty = 'true';
     qubits.forEach((qubit, row) => {
       const y = 42 + row * 48;
@@ -391,6 +398,18 @@ export class DigitalEditorWidget extends Widget {
         });
       }
     });
+    if (measurement.terminal) {
+      qubits.forEach((qubit, row) => {
+        const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        group.dataset.role = 'measurement';
+        group.setAttribute('aria-label', `Measure ${qubit.id} → ${measurement.key}`);
+        const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+        title.textContent = `Measure ${qubit.id} → ${measurement.key}`;
+        group.append(title);
+        appendGateBox(group, 96 + gates.length * 82, 42 + row * 48, 'M');
+        svg.append(group);
+      });
+    }
     viewport.append(svg);
     section.append(viewport);
     return section;
@@ -642,7 +661,7 @@ function appendControlledTarget(
 }
 
 function appendGateBox(
-  svg: SVGSVGElement,
+  svg: SVGSVGElement | SVGGElement,
   x: number,
   y: number,
   label: string,

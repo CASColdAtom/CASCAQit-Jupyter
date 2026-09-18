@@ -32,6 +32,29 @@ beforeAll(async () => {
 });
 
 describe('DigitalEditorWidget', () => {
+  it('shows default terminal measurements and follows qubits and the switch', () => {
+    const editor = new DigitalEditorWidget({ panel: () => null });
+    document.body.append(editor.node);
+    const measurements = (): number => editor.node.querySelectorAll('[data-role="measurement"]').length;
+    expect(measurements()).toBe(2);
+    editor.node.querySelector<HTMLButtonElement>('[aria-label="Add qubit"]')!.click();
+    expect(measurements()).toBe(3);
+    const toggle = (): HTMLInputElement => editor.node.querySelector('[data-testid="terminal-measurement"]')!;
+    expect(toggle().checked).toBe(true);
+    toggle().click();
+    expect(measurements()).toBe(0);
+    expect(editor.editorDocument.editor_model.measurement.terminal).toBe(false);
+    toggle().click();
+    expect(measurements()).toBe(3);
+    const key = editor.node.querySelector<HTMLInputElement>('[aria-label="Measurement key"]')!;
+    key.value = 'readout';
+    key.dispatchEvent(new Event('change'));
+    expect(editor.node.querySelector('[data-role="measurement"]')?.getAttribute('aria-label')).toBe('Measure q0 → readout');
+    editor.node.querySelector<HTMLButtonElement>('[aria-label="Remove qubit q2"]')!.click();
+    expect(measurements()).toBe(2);
+    editor.dispose();
+  });
+
   it('provides keyboard-operable controls and a non-empty circuit preview', () => {
     const editor = new DigitalEditorWidget({
       panel: () => null,

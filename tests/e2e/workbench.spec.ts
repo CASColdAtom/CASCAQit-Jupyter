@@ -73,7 +73,25 @@ test('home creates a fresh notebook and code reports actual availability', async
   await expect(home).toBeVisible();
   const news = page.getByRole('button', { name: 'No', exact: true });
   if (await news.isVisible()) { await news.click(); }
+  await expect(page.locator('#jupyterlab-splash')).toBeHidden();
+  await expect(home.locator('.cascaqit-Home-capability')).toHaveCount(4);
+  await expect(home.locator('.cascaqit-Home-files')).not.toContainText('正在读取');
+  await expect(home.locator('.cascaqit-Home-art svg')).toHaveCount(2);
+  expect(await home.locator('.cascaqit-Home-art svg').first().locator('line, rect, circle').count()).toBeGreaterThan(5);
+  expect(await home.evaluate(n => n.scrollWidth <= n.clientWidth + 1)).toBe(true);
+  await home.getByRole('button', { name: '浏览项目文件', exact: true }).click();
+  await expect(page.locator('#filebrowser')).toBeVisible();
+  await page.getByRole('tab', { name: /File Browser/ }).click();
+  await home.getByRole('button', { name: '新建 Digital 实验', exact: true }).focus();
+  await expect(home.getByRole('button', { name: '新建 Digital 实验', exact: true })).toBeFocused();
   await page.screenshot({ path: `artifacts/screenshots/${info.project.name}-workbench-home.png` });
+  if (info.project.name === 'lab-narrow') {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    expect(await home.evaluate(n => n.scrollWidth <= n.clientWidth + 1)).toBe(true);
+    await page.screenshot({ path: 'artifacts/screenshots/workbench-home-375.png' });
+    await page.setViewportSize({ width: 640, height: 900 });
+  }
   // Keep test-created notebooks in the test artifact directory.
   await page.route(/\/api\/contents\/?(?:\?.*)?$/, route => {
     if (route.request().method() === 'POST') {
