@@ -31,6 +31,24 @@ test('creates, restores, and detaches a Digital generated cell', async ({
   const editor = page.locator('.cascaqit-Editor');
   await expect(editor).toBeVisible();
   await expect(editor.getByTestId('editor-status')).toHaveText('Draft');
+  const cloudSkin = await editor.evaluate(node => {
+    const root = getComputedStyle(node);
+    const header = getComputedStyle(
+      node.querySelector<HTMLElement>('.cascaqit-Editor-header')!
+    );
+    return {
+      primary: root.getPropertyValue('--cascaqit-primary').trim(),
+      text: root.color,
+      surface: root.backgroundColor,
+      header: header.backgroundColor
+    };
+  });
+  expect(cloudSkin).toEqual({
+    primary: '#165dff',
+    text: 'rgb(29, 33, 41)',
+    surface: 'rgb(255, 255, 255)',
+    header: 'rgb(255, 255, 255)'
+  });
   if (desktop) {
     await exerciseEditorResize(page, editor);
   }

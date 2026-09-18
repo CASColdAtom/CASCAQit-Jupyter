@@ -99,6 +99,29 @@ test('renders every read-only domain view without overflow or executable markup'
     })
   );
   expect(headersDoNotOverlap).toBe(true);
+  const cloudSkin = await renderers.first().evaluate(node => {
+    const renderer = getComputedStyle(node);
+    const header = getComputedStyle(
+      node.querySelector<HTMLElement>('.cascaqit-Renderer-header')!
+    );
+    const metrics = getComputedStyle(
+      node.querySelector<HTMLElement>('.cascaqit-Renderer-metrics')!
+    );
+    return {
+      primary: renderer.getPropertyValue('--cascaqit-primary').trim(),
+      text: renderer.color,
+      radius: renderer.borderRadius,
+      header: header.backgroundColor,
+      metrics: metrics.backgroundColor
+    };
+  });
+  expect(cloudSkin).toEqual({
+    primary: '#165dff',
+    text: 'rgb(29, 33, 41)',
+    radius: '8px',
+    header: 'rgb(255, 255, 255)',
+    metrics: 'rgb(247, 248, 250)'
+  });
   const resultHeadersFit = await renderers
     .filter({ has: page.locator('.cascaqit-Renderer-title', { hasText: /^Result$/ }) })
     .evaluateAll(nodes => nodes.every(node => {
