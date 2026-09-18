@@ -40,22 +40,23 @@ describe('Analog editor document', () => {
 
   it('edits waveform segments and terminal measurement', () => {
     let document = createAnalogDocument(() => 'document.analog.test');
+    const originalCount = document.editor_model.controls.detuning.segments.length;
     document = addSegment(document, 'detuning');
-    document = updateSegment(document, 'detuning', 1, {
+    document = updateSegment(document, 'detuning', originalCount, {
       duration: 0.5,
       end_value: 7
     });
     document = setAnalogMeasurement(document, false);
 
-    expect(document.editor_model.controls.detuning.segments[1]).toMatchObject({
+    expect(document.editor_model.controls.detuning.segments[originalCount]).toMatchObject({
       start_value: 4,
       duration: 0.5,
       end_value: 7
     });
     expect(document.editor_model.measurement.enabled).toBe(false);
 
-    document = removeSegment(document, 'detuning', 1);
-    expect(document.editor_model.controls.detuning.segments).toHaveLength(1);
+    document = removeSegment(document, 'detuning', originalCount);
+    expect(document.editor_model.controls.detuning.segments).toHaveLength(originalCount);
   });
 
   it.each([

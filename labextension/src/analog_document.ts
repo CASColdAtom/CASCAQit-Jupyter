@@ -90,7 +90,9 @@ export function createAnalogDocument(
         },
         detuning: {
           segments: [
-            { id: 'd0', duration: 1.2, start_value: -4, end_value: 4 }
+            { id: 'd0', duration: 0.4, start_value: -4, end_value: -4 },
+            { id: 'd1', duration: 0.4, start_value: -4, end_value: 4 },
+            { id: 'd2', duration: 0.4, start_value: 4, end_value: 4 }
           ]
         },
         phase: {

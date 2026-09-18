@@ -35,6 +35,15 @@ def test_templates_run_offline_and_restore_editable_source(kind: str) -> None:
     assert isinstance(result, ResultIR)
     assert sum(result.counts.values()) == 128
     assert result.program_hash == namespace["program"].stable_hash()
+    if kind == "analog":
+        terms = namespace["program"].to_dict()["hamiltonian"]["terms"]
+        for name, values in (
+            ("rabi", [0.0, 2.5, 2.5, 0.0]),
+            ("detuning", [-4.0, -4.0, 4.0, 4.0]),
+        ):
+            assert terms[name]["times"] == [0.0, 0.4, 0.8, 1.2]
+            assert terms[name]["values"] == values
+        assert terms["phase"]["duration"] == 1.2
 
 
 def test_unknown_template_is_rejected() -> None:

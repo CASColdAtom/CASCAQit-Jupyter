@@ -46,17 +46,18 @@ def create_template(kind: str) -> dict[str, Any]:
                 name: {
                     "segments": [
                         {
-                            "id": name,
-                            "duration": 1.2,
-                            "start_value": start,
-                            "end_value": end,
+                            "id": f"{name}{index}",
+                            "duration": duration,
+                            "start_value": values[index],
+                            "end_value": values[index + 1],
                         }
+                        for index in range(len(values) - 1)
                     ]
                 }
-                for name, start, end in [
-                    ("rabi", 2.5, 2.5),
-                    ("detuning", -4.0, 4.0),
-                    ("phase", 0.0, 0.0),
+                for name, duration, values in [
+                    ("rabi", 0.4, [0.0, 2.5, 2.5, 0.0]),
+                    ("detuning", 0.4, [-4.0, -4.0, 4.0, 4.0]),
+                    ("phase", 1.2, [0.0, 0.0]),
                 ]
             },
             "measurement": {"enabled": True},

@@ -1177,6 +1177,9 @@
 .cascaqit-Home-art .target { fill: var(--cascaqit-surface); stroke: var(--cascaqit-primary); stroke-width: 2; }
 .cascaqit-Home-art .atom-halo { fill: var(--cascaqit-primary-tint); }
 .cascaqit-Home-art .detuning { fill: none; stroke: var(--cascaqit-control); stroke-width: 2; }
+.cascaqit-Home-art .analog-stage { fill: var(--cascaqit-primary-tint); }
+.cascaqit-Home-art .analog-stage-1 { fill: var(--cascaqit-border); }
+.cascaqit-Home-art .stage-boundary { stroke: var(--cascaqit-text-secondary); stroke-width: 1; stroke-dasharray: 3 4; }
 .cascaqit-Home-templateBody { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 24px; border-top: 1px solid var(--cascaqit-border); }
 .cascaqit-Home-templateBody h2 { margin: 0; font-size: 20px; font-weight: 500; }
 .cascaqit-Home-templateBody button { color: var(--cascaqit-primary); }

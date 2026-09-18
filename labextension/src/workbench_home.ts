@@ -22,7 +22,7 @@ function svg<K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string,
 /** Template illustrations use local SVG only; no font/network dependency. */
 function illustration(kind: 'digital' | 'analog'): SVGSVGElement {
   const root = svg('svg', { viewBox: '0 0 400 140', role: 'img',
-    'aria-label': kind === 'digital' ? 'Bell 模板：H、受控 X 和两个末端测量' : '双原子模板：5 微米间距、恒定 Rabi 与线性失谐' });
+    'aria-label': kind === 'digital' ? 'Bell 模板：H、受控 X 和两个末端测量' : '双原子模板：5 微米间距；0–0.4 微秒升起驱动，0.4–0.8 微秒扫描失谐，0.8–1.2 微秒关闭驱动' });
   if (kind === 'digital') {
     for (const [i, y] of [46, 98].entries()) {
       root.append(svg('text', { x: 18, y: y + 5, class: 'wire-label' }, `q${i}`),
@@ -43,12 +43,19 @@ function illustration(kind: 'digital' | 'analog'): SVGSVGElement {
       root.append(svg('circle', { cx: x, cy: 68, r: 22, class: 'atom-halo' }),
         svg('circle', { cx: x, cy: 68, r: 9, class: 'control' }));
     }
+    for (const [index, x] of [210, 268, 326].entries()) {
+      root.append(svg('rect', { x, y: 22, width: 58, height: 86,
+        class: `analog-stage analog-stage-${index}` }));
+    }
+    for (const x of [268, 326]) {
+      root.append(svg('line', { x1: x, y1: 22, x2: x, y2: 108, class: 'stage-boundary' }));
+    }
     root.append(svg('text', { x: 108, y: 111, class: 'gate-label' }, '5 μm'),
-      svg('line', { x1: 228, y1: 30, x2: 228, y2: 108, class: 'wire' }),
-      svg('line', { x1: 228, y1: 108, x2: 382, y2: 108, class: 'wire' }),
-      svg('path', { d: 'M 232 49 L 376 49', class: 'pulse' }),
-      svg('path', { d: 'M 232 99 L 376 29', class: 'detuning' }),
-      svg('text', { x: 266, y: 130, class: 'wire-label' }, '0 → 1.2 μs'));
+      svg('line', { x1: 210, y1: 22, x2: 210, y2: 108, class: 'wire' }),
+      svg('line', { x1: 210, y1: 108, x2: 384, y2: 108, class: 'wire' }),
+      svg('path', { d: 'M 210 108 L 268 42 L 326 42 L 384 108', class: 'pulse' }),
+      svg('path', { d: 'M 210 94 L 268 94 L 326 30 L 384 30', class: 'detuning' }),
+      svg('text', { x: 297, y: 132, class: 'wire-label', 'text-anchor': 'middle' }, '0 → 1.2 μs'));
   }
   return root;
 }

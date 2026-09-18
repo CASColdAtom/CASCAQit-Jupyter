@@ -10,6 +10,11 @@ for (const kind of ['digital', 'analog']) {
     const template = await request.get(`${SERVER}/cascaqit/templates/${kind}`);
     expect(template.ok()).toBe(true);
     const content = await template.json();
+    if (kind === 'analog') {
+      const controls = content.cells[1].metadata.cascaqit_jupyter.editor_document.editor_model.controls;
+      expect(controls.rabi.segments).toHaveLength(3);
+      expect(controls.detuning.segments).toHaveLength(3);
+    }
     await page.evaluate(async ({ path, content }) => {
       const xsrf = document.cookie.match(/(?:^|; )_xsrf=([^;]*)/)?.[1] ?? '';
       const response = await fetch(`/api/contents/${path}`, {
@@ -75,6 +80,12 @@ for (const kind of ['digital', 'analog']) {
     await nav.getByRole('button', { name: editorName, exact: true }).click();
     const editor = page.locator('.cascaqit-Editor:visible');
     await expect(editor).toBeVisible();
+    if (kind === 'analog') {
+      await expect(editor.locator('.cascaqit-AnalogEditor-segment')).toHaveCount(7);
+      await expect(editor.getByTestId('analog-waveform-preview'))
+        .toHaveAttribute('data-cascaqit-bokeh-channels', '3');
+      await editor.screenshot({ path: `artifacts/screenshots/${info.project.name}-analog-template.png` });
+    }
     if (kind === 'digital') {
       await editor.getByRole('button', { name: 'Add gate', exact: true }).click();
       await expect(editor.locator('.cascaqit-Editor-gate')).toHaveCount(3);
@@ -96,6 +107,10 @@ test('home creates a fresh notebook and code reports actual availability', async
   await expect(home.locator('.cascaqit-Home-capability')).toHaveCount(4);
   await expect(home.locator('.cascaqit-Home-files')).not.toContainText('正在读取');
   await expect(home.locator('.cascaqit-Home-art svg')).toHaveCount(2);
+  const analogArt = home.locator('.cascaqit-Home-template-analog svg');
+  await expect(analogArt).toHaveAccessibleName(/升起驱动.*扫描失谐.*关闭驱动/);
+  await expect(analogArt.locator('.analog-stage')).toHaveCount(3);
+  await expect(analogArt.locator('.stage-boundary')).toHaveCount(2);
   expect(await home.locator('.cascaqit-Home-art svg').first().locator('line, rect, circle').count()).toBeGreaterThan(5);
   expect(await home.evaluate(n => n.scrollWidth <= n.clientWidth + 1)).toBe(true);
   await home.getByRole('button', { name: '浏览项目文件', exact: true }).click();

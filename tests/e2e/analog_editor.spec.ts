@@ -35,7 +35,7 @@ test('compiles, runs, restores, validates, and detaches an Analog program', asyn
     await exerciseEditorResize(page, editor);
   }
   await expect(editor.locator('.cascaqit-AnalogEditor-site')).toHaveCount(2);
-  await expect(editor.locator('.cascaqit-AnalogEditor-segment')).toHaveCount(5);
+  await expect(editor.locator('.cascaqit-AnalogEditor-segment')).toHaveCount(7);
 
   await editor.getByRole('button', { name: 'Add register site' }).click();
   await editor.getByRole('button', { name: 'Add register site' }).click();
