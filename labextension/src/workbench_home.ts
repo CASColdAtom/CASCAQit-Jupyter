@@ -22,7 +22,7 @@ function svg<K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string,
 /** Template illustrations use local SVG only; no font/network dependency. */
 function illustration(kind: 'digital' | 'analog'): SVGSVGElement {
   const root = svg('svg', { viewBox: '0 0 400 140', role: 'img',
-    'aria-label': kind === 'digital' ? 'Bell 模板：H、受控 X 和两个末端测量' : '双原子模板：5 微米间距；0–0.4 微秒升起驱动，0.4–0.8 微秒扫描失谐，0.8–1.2 微秒关闭驱动' });
+    'aria-label': kind === 'digital' ? 'Bell 模板：H、受控 X 和两个末端测量' : '双原子模板：5 微米间距；rabi、detuning、phase 三个通道分行显示，phase 全程为 0 rad；0–0.4 微秒升起驱动，0.4–0.8 微秒扫描失谐，0.8–1.2 微秒关闭驱动' });
   if (kind === 'digital') {
     for (const [i, y] of [46, 98].entries()) {
       root.append(svg('text', { x: 18, y: y + 5, class: 'wire-label' }, `q${i}`),
@@ -38,8 +38,8 @@ function illustration(kind: 'digital' | 'analog'): SVGSVGElement {
       svg('line', { x1: 200, y1: 98, x2: 224, y2: 98, class: 'connection' }),
       svg('line', { x1: 212, y1: 86, x2: 212, y2: 110, class: 'connection' }));
   } else {
-    root.append(svg('line', { x1: 60, y1: 68, x2: 156, y2: 68, class: 'wire', 'stroke-dasharray': '4 4' }));
-    for (const x of [60, 156]) {
+    root.append(svg('line', { x1: 36, y1: 68, x2: 100, y2: 68, class: 'wire', 'stroke-dasharray': '4 4' }));
+    for (const x of [36, 100]) {
       root.append(svg('circle', { cx: x, cy: 68, r: 22, class: 'atom-halo' }),
         svg('circle', { cx: x, cy: 68, r: 9, class: 'control' }));
     }
@@ -50,11 +50,15 @@ function illustration(kind: 'digital' | 'analog'): SVGSVGElement {
     for (const x of [268, 326]) {
       root.append(svg('line', { x1: x, y1: 22, x2: x, y2: 108, class: 'stage-boundary' }));
     }
-    root.append(svg('text', { x: 108, y: 111, class: 'gate-label' }, '5 μm'),
+    root.append(svg('text', { x: 68, y: 111, class: 'gate-label' }, '5 μm'),
       svg('line', { x1: 210, y1: 22, x2: 210, y2: 108, class: 'wire' }),
       svg('line', { x1: 210, y1: 108, x2: 384, y2: 108, class: 'wire' }),
-      svg('path', { d: 'M 210 108 L 268 42 L 326 42 L 384 108', class: 'pulse' }),
-      svg('path', { d: 'M 210 94 L 268 94 L 326 30 L 384 30', class: 'detuning' }),
+      svg('text', { x: 200, y: 39, class: 'wire-label', 'text-anchor': 'end' }, 'rabi'),
+      svg('text', { x: 200, y: 71, class: 'wire-label', 'text-anchor': 'end' }, 'detuning'),
+      svg('text', { x: 200, y: 103, class: 'wire-label', 'text-anchor': 'end' }, 'phase'),
+      svg('path', { d: 'M 210 46 L 268 22 L 326 22 L 384 46', class: 'pulse', 'data-channel': 'rabi' }),
+      svg('path', { d: 'M 210 78 L 268 78 L 326 54 L 384 54', class: 'detuning', 'data-channel': 'detuning' }),
+      svg('path', { d: 'M 210 98 L 384 98', class: 'phase', 'data-channel': 'phase' }),
       svg('text', { x: 297, y: 132, class: 'wire-label', 'text-anchor': 'middle' }, '0 → 1.2 μs'));
   }
   return root;
