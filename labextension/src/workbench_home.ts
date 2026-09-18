@@ -1,6 +1,7 @@
 import type { JupyterFrontEnd } from '@jupyterlab/application';
 import type { IDocumentManager } from '@jupyterlab/docmanager';
 import { Widget } from '@lumino/widgets';
+import type { ShellMode } from './shell_mode';
 
 const PREFIX = 'cascaqit-Home';
 
@@ -54,7 +55,7 @@ function illustration(kind: 'digital' | 'analog'): SVGSVGElement {
 
 export function createWorkbenchHome(
   app: JupyterFrontEnd, documents: IDocumentManager,
-  request: (path: string) => Promise<unknown>
+  request: (path: string) => Promise<unknown>, shellMode: ShellMode
 ): { widget: Widget; refresh: () => Promise<void> } {
   const widget = new Widget();
   widget.id = 'cascaqit-workbench';
@@ -97,7 +98,7 @@ export function createWorkbenchHome(
   const top = el('header', 'top');
   const brand = el('div', 'brand', 'CASCAQit');
   brand.append(el('span', '', '量子工作台'));
-  top.append(brand);
+  top.append(brand, shellMode.button(widget));
   const main = el('main', 'main');
   const welcome = el('section', 'welcome');
   welcome.append(el('h1', '', '新建实验'),

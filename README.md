@@ -14,6 +14,10 @@ CASCAQit-Jupyter 为 JupyterLab 4 和 Notebook 7 提供 CASCAQit 中性原子量
 首页提供实验线路缩略图、项目根目录最近修改的 Notebook 和当前开发环境状态；
 可以直接打开已有文件、浏览项目或启动终端。
 
+首页和 Notebook 顶部的 **简洁模式** 可收起 Jupyter 菜单（JupyterLab 还会收起底部
+状态栏），保留文件侧栏、单元格工具栏和工作台导航。右下角 **显示菜单** 可恢复，
+也支持 `Alt+Shift+M`（macOS 为 `⌥+⇧+M`）；开关状态保存在当前浏览器中。
+
 每个 Notebook 顶部提供以下入口：
 
 | 入口 | 当前能力 |

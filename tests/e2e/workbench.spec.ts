@@ -25,6 +25,25 @@ for (const kind of ['digital', 'analog']) {
     await expect(nav).toBeVisible();
     const news = page.getByRole('button', { name: 'No', exact: true });
     if (await news.isVisible()) { await news.click(); }
+    if (kind === 'digital') {
+      const toggle = page.getByTestId('shell-simple-mode').filter({ visible: true });
+      await expect(page.getByRole('menubar')).toBeVisible();
+      await toggle.click();
+      await expect(page.getByRole('menubar')).toBeHidden();
+      if (info.project.name.startsWith('notebook')) {
+        await expect(page.locator('#menu-panel-wrapper')).toBeHidden();
+      }
+      await expect(page.getByRole('button', { name: '显示 Jupyter 菜单' })).toBeVisible();
+      await expect(nav).toBeVisible();
+      await page.screenshot({ path: `artifacts/screenshots/${info.project.name}-simple-mode.png` });
+      await page.reload();
+      await expect(nav).toBeVisible();
+      await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+      await expect(page.getByRole('menubar')).toBeHidden();
+      await page.getByRole('button', { name: '显示 Jupyter 菜单' }).click();
+      await expect(page.getByRole('menubar')).toBeVisible();
+      await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    }
     await expect(page.getByTestId('workbench-run-all')).toBeEnabled();
     await page.getByTestId('workbench-run-all').click();
     const plot = page.getByTestId(kind === 'digital' ? 'digital-circuit' : 'register-plot');
@@ -87,6 +106,11 @@ test('home creates a fresh notebook and code reports actual availability', async
   expect(await home.getByRole('button', { name: '创建 Digital 实验', exact: true })
     .evaluate(n => parseFloat(getComputedStyle(n).fontSize))).toBeGreaterThanOrEqual(16);
   await page.screenshot({ path: `artifacts/screenshots/${info.project.name}-workbench-home.png` });
+  await home.getByTestId('shell-simple-mode').click();
+  await expect(page.getByRole('menubar')).toBeHidden();
+  await page.screenshot({ path: `artifacts/screenshots/${info.project.name}-simple-home.png` });
+  await page.keyboard.press('Alt+Shift+m');
+  await expect(page.getByRole('menubar')).toBeVisible();
   if (info.project.name === 'lab-narrow') {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.emulateMedia({ reducedMotion: 'reduce' });

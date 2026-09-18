@@ -10,6 +10,7 @@ import { Widget } from '@lumino/widgets';
 import { renderPayload } from './renderer';
 import { workbenchRuns } from './workbench_runs';
 import { createWorkbenchHome } from './workbench_home';
+import { ShellMode } from './shell_mode';
 
 const HOME = 'cascaqit:workbench';
 const settings = ServerConnection.makeSettings();
@@ -51,7 +52,8 @@ class NotebookWorkspace {
   constructor(
     private app: JupyterFrontEnd,
     private panel: NotebookPanel,
-    private labShell: ILabShell | null
+    private labShell: ILabShell | null,
+    shellMode: ShellMode
   ) {
     const bar = node('div', 'cascaqit-Workbench-nav');
     const nav = node('nav');
@@ -80,7 +82,7 @@ class NotebookWorkspace {
       this.updateStatus();
     }));
     this.run.dataset.testid = 'workbench-run-all';
-    execution.append(this.status, this.run);
+    execution.append(this.status, this.run, shellMode.button(this.header));
     this.status.setAttribute('role', 'status');
     this.status.dataset.testid = 'workbench-kernel-status';
     this.feedback.setAttribute('role', 'status');
@@ -319,9 +321,19 @@ const workbenchPlugin: JupyterFrontEndPlugin<void> = {
     documents: IDocumentManager, palette: ICommandPalette | null,
     launcher: ILauncher | null, labShell: ILabShell | null): void => {
     let home: Widget | null = null;
+    const shellMode = new ShellMode(app, `cascaqit:simple:${settings.baseUrl}:${labShell ? 'lab' : 'notebook'}`);
+    app.commands.addCommand('cascaqit:toggle-simple-mode', {
+      label: 'CASCAQit: 简洁模式',
+      isToggled: () => shellMode.enabled,
+      execute: () => shellMode.toggle()
+    });
+    app.commands.addKeyBinding({
+      command: 'cascaqit:toggle-simple-mode', keys: ['Alt Shift M'], selector: 'body'
+    });
+    palette?.addItem({ command: 'cascaqit:toggle-simple-mode', category: 'CASCAQit' });
     let refreshHome: (() => Promise<void>) | null = null;
     const attach = (panel: NotebookPanel): void => {
-      new NotebookWorkspace(app, panel, labShell);
+      new NotebookWorkspace(app, panel, labShell, shellMode);
     };
     notebooks.forEach(attach);
     notebooks.widgetAdded.connect((_sender, panel) => attach(panel));
@@ -334,7 +346,7 @@ const workbenchPlugin: JupyterFrontEndPlugin<void> = {
           return;
         }
         if (home === null || home.isDisposed) {
-          const created = createWorkbenchHome(app, documents, workbenchRequest);
+          const created = createWorkbenchHome(app, documents, workbenchRequest, shellMode);
           home = created.widget;
           refreshHome = created.refresh;
           app.shell.add(home, 'main');
