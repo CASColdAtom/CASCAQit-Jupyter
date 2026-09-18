@@ -1,6 +1,6 @@
 {
   "name": "@cascaqit/jupyter",
-  "version": "0.1.0-alpha.2",
+  "version": "0.2.0-alpha.1",
   "description": "CASCAQit visual editors and safe MIME renderers for JupyterLab 4 and Notebook 7",
   "license": "Apache-2.0",
   "private": true,
@@ -25,8 +25,12 @@
     "@jupyterlab/apputils": "^4.1.2",
     "@jupyterlab/cells": "^4.5.10",
     "@jupyterlab/completer": "^4.0.2",
+    "@jupyterlab/coreutils": "^6.6.3",
+    "@jupyterlab/docmanager": "^4.6.3",
+    "@jupyterlab/launcher": "^4.6.3",
     "@jupyterlab/notebook": "^4.0.2",
     "@jupyterlab/rendermime-interfaces": "^3.8.2",
+    "@jupyterlab/services": "^7.6.3",
     "@jupyterlab/settingregistry": "^4.0.2",
     "@lumino/widgets": "^2.9.0",
     "tslib": "^2.8.1"
@@ -40,7 +44,7 @@
     "vitest": "^4.0.17"
   },
   "overrides": {
-    "sanitize-html": "2.17.6",
+    "sanitize-html": "2.17.7",
     "@jupyterlab/builder": {
       "glob": "^13.0.6"
     }

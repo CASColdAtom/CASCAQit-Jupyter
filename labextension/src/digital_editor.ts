@@ -19,6 +19,7 @@ import { JobController } from './job_controller';
 import { renderJobView } from './job_view';
 import { CompilePayload, NotebookBridge } from './notebook_bridge';
 import type { CommResponse, ProtocolError } from './protocol';
+import { editorFocusButton } from './editor_focus';
 
 const GATE_OPTIONS = [
   'h', 'x', 'y', 'z', 'rx', 'ry', 'rz', 'cx', 'cy', 'cz', 'swap', 'ccx'
@@ -149,7 +150,7 @@ export class DigitalEditorWidget extends Widget {
     const status = element('span', `cascaqit-Editor-status is-${this.document.compile_status}`);
     status.dataset.testid = 'editor-status';
     status.textContent = statusLabel(this.document.compile_status);
-    header.append(heading, status);
+    header.append(heading, editorFocusButton(this.node), status);
     return header;
   }
 

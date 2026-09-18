@@ -39,6 +39,6 @@ printf '%s  %s\n' "${CASCAQIT_WHEEL_SHA256}" "${wheel_path}" | sha256sum --check
 
 python -m pip install --disable-pip-version-check "${wheel_path}"
 npm ci
-python -m pip install --disable-pip-version-check ".[lab]"
+python -m pip install --disable-pip-version-check ".[ide]"
 
 bash .devcontainer/verify-environment.sh

@@ -4,6 +4,52 @@
 
 CASCAQit-Jupyter 为 JupyterLab 4 和 Notebook 7 提供 CASCAQit 中性原子量子编程集成。当前版本包含可安装的 Python kernel companion（内核伴随包）、Digital 和 Analog 可视化编辑器，以及面向 CASCAQit Program、Result、Diagnostics 和 Visualization IR 公开对象的安全 MIME 渲染器。
 
+## 0.2 量子工作台
+
+当前源码版本为 `0.2.0a1`。JupyterLab 空工作区会打开量子工作台，也可以从 Launcher
+或命令面板选择 **CASCAQit: 量子工作台**。首页提供 Bell 纠缠和双原子 Analog
+两个模板，每次创建一个新的 Notebook，不覆盖已有文件。内核就绪后点击 **运行全部**，
+即可直接查看程序图形和离线模拟结果。
+
+每个 Notebook 顶部提供以下入口：
+
+| 入口 | 当前能力 |
+| --- | --- |
+| Notebook | 常规代码与 Markdown 编辑，显示真实内核状态，一键运行全部并保存 |
+| Digital / Analog | 进入当前 Notebook 的线路编辑器；切换不会重置未生成的草稿；支持全屏线路，Esc 返回 |
+| Code | 保存 Notebook 后，通过 Jupyter 认证代理在独立标签页打开 code-server |
+| 结果 | 汇集 CASCAQit 内联输出及本次页面会话中最近 20 个编辑器任务快照，支持返回对应单元格 |
+| 演示 | 在同一个 Notebook 中隐藏代码输入，保留文字与输出；再次点击或选择 Notebook 恢复 |
+
+结果页显示的是运行快照；编辑器草稿变更或生成源码变化后，历史编辑器结果会标为过期。
+Notebook 中已有输出不会因为改代码而自动重新计算。模式切换不执行代码，也不提交云任务。
+刷新页面后，编辑器任务的完整 Result 不会从 metadata 重建；已保存 Notebook 的内联输出仍可浏览。
+演示模式只控制显示，不是隐藏源码权限，也不是已部署的独立 Web App。
+
+安装 `ide` extra（可选依赖组）可启用 JupyterLab Python LSP（语言服务器协议）的补全、
+跳转和诊断，以及 Git 面板；Debugger（调试器）使用 JupyterLab 和 ipykernel 自带能力。
+从本仓库安装时，先确保环境中已有已发布的 CASCAQit wheel，然后执行：
+
+```console
+.venv/bin/python -m pip install ".[ide]"
+bash scripts/install-code-server.sh
+bash scripts/start-workbench.sh --port=8888
+```
+
+源码安装需要 Node.js；wheel 安装仍不需要 Node.js。`install-code-server.sh` 下载官方
+`4.137.0` 独立发行包，验证固定 SHA256，支持 macOS/Linux 的 arm64/amd64，安装在
+`artifacts/tools/`。已有 code-server 可通过 `CASCAQIT_CODE_SERVER` 指定可执行文件，
+或加入启动 Jupyter 的 `PATH`。若未安装，Code 页会显示配置指引，其余功能仍可使用。
+
+启动脚本使用 `.venv`，也支持 `CASCAQIT_JUPYTER_VENV`。Jupyter 保留访问令牌认证，
+code-server 仅监听回环地址，经 `/code/` 代理访问。两者共享 Jupyter 的 `root_dir`
+和启动环境；code-server 配置与扩展存放在 `.cascaqit-ide/`，可以通过
+`CASCAQIT_IDE_STATE` 更改位置。不要直接对外暴露 code-server 后端端口。
+
+Code 与 Notebook 共享磁盘文件，不自动共享内存变量；请避免同时编辑同一个文件。
+code-server 使用其兼容的扩展生态，Python/Jupyter 扩展需按需安装，并选择与当前
+Jupyter 相同的解释器；本项目尚不包含专用 CASCAQit VS Code 扩展。
+
 ## 在 GitHub Codespaces 中运行（内部）
 
 此入口仅供拥有私有仓库 `CASColdAtom/CASCAQit` 读取权限的协作者使用。点击上方按钮并选择 **Create codespace**；GitHub 会要求授予当前 Codespace 对 Core 仓库的只读 `contents` 权限。没有 Core 权限的账号不能完成环境安装。

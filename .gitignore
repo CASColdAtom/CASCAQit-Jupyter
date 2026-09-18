@@ -17,3 +17,5 @@ build/
 /playwright-report/
 /src/cascaqit_jupyter/labextension/
 /plan/
+/.cascaqit-ide/
+/.virtual_documents/

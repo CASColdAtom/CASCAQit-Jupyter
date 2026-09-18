@@ -18,6 +18,7 @@ import {
   isCodeCellEditing
 } from './code_completion';
 import { DigitalEditorWidget } from './digital_editor';
+import workbenchPlugin from './workbench';
 
 const DIGITAL_COMMAND = 'cascaqit:open-digital-editor';
 const ANALOG_COMMAND = 'cascaqit:open-analog-editor';
@@ -36,8 +37,8 @@ const plugin: JupyterFrontEndPlugin<void> = {
     completionManager: ICompletionProviderManager,
     palette: ICommandPalette | null
   ): void => {
-    let digitalEditor: DigitalEditorWidget | null = null;
-    let analogEditor: AnalogEditorWidget | null = null;
+    const digitalEditors = new WeakMap<NotebookPanel, DigitalEditorWidget>();
+    const analogEditors = new WeakMap<NotebookPanel, AnalogEditorWidget>();
     const completion = new CodeCompletionController(settingRegistry);
     const addEditorToWorkspace = (
       editor: DigitalEditorWidget | AnalogEditorWidget,
@@ -47,25 +48,43 @@ const plugin: JupyterFrontEndPlugin<void> = {
       editor.parent?.addClass('cascaqit-EditorHost');
     };
     const openDigital = async (): Promise<void> => {
-      if (digitalEditor === null || digitalEditor.isDisposed) {
+      const panel = notebooks.currentWidget;
+      if (panel === null) { return; }
+      let digitalEditor = digitalEditors.get(panel);
+      if (digitalEditor === undefined || digitalEditor.isDisposed) {
         digitalEditor = new DigitalEditorWidget({
-          panel: () => notebooks.currentWidget
+          panel: () => panel.isDisposed ? null : panel
         });
+        digitalEditor.id = `cascaqit-digital-editor-${panel.id}`;
+        digitalEditors.set(panel, digitalEditor);
+        const editor = digitalEditor;
+        panel.disposed.connect(() => editor.dispose());
         addEditorToWorkspace(digitalEditor, 900);
+        await digitalEditor.bindPanel(panel);
       }
-      await digitalEditor.bindPanel(notebooks.currentWidget);
-      app.shell.activateById(digitalEditor.id);
+      if (!digitalEditor.isVisible) {
+        app.shell.activateById(digitalEditor.id);
+      }
       enableEditorResize(digitalEditor);
     };
     const openAnalog = async (): Promise<void> => {
-      if (analogEditor === null || analogEditor.isDisposed) {
+      const panel = notebooks.currentWidget;
+      if (panel === null) { return; }
+      let analogEditor = analogEditors.get(panel);
+      if (analogEditor === undefined || analogEditor.isDisposed) {
         analogEditor = new AnalogEditorWidget({
-          panel: () => notebooks.currentWidget
+          panel: () => panel.isDisposed ? null : panel
         });
+        analogEditor.id = `cascaqit-analog-editor-${panel.id}`;
+        analogEditors.set(panel, analogEditor);
+        const editor = analogEditor;
+        panel.disposed.connect(() => editor.dispose());
         addEditorToWorkspace(analogEditor, 901);
+        await analogEditor.bindPanel(panel);
       }
-      await analogEditor.bindPanel(notebooks.currentWidget);
-      app.shell.activateById(analogEditor.id);
+      if (!analogEditor.isVisible) {
+        app.shell.activateById(analogEditor.id);
+      }
       enableEditorResize(analogEditor);
     };
 
@@ -222,4 +241,4 @@ function editorResizeHost(editor: Widget): SplitPanel | null {
   return split;
 }
 
-export default plugin;
+export default [plugin, workbenchPlugin];

@@ -29,6 +29,7 @@ import { JobController } from './job_controller';
 import { renderJobView } from './job_view';
 import { CompilePayload, NotebookBridge } from './notebook_bridge';
 import type { CommResponse, ProtocolError } from './protocol';
+import { editorFocusButton } from './editor_focus';
 
 const CHANNELS: AnalogChannel[] = ['rabi', 'detuning', 'phase'];
 
@@ -169,7 +170,7 @@ export class AnalogEditorWidget extends Widget {
     );
     status.dataset.testid = 'analog-editor-status';
     status.textContent = statusLabel(this.document.compile_status);
-    header.append(heading, status);
+    header.append(heading, editorFocusButton(this.node), status);
     return header;
   }
 

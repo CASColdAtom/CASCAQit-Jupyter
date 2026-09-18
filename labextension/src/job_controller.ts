@@ -3,6 +3,7 @@ import type { NotebookPanel } from '@jupyterlab/notebook';
 import type { KernelClient } from './kernel_client';
 import type { NotebookBridge } from './notebook_bridge';
 import type { CommResponse, ProtocolError } from './protocol';
+import { markWorkbenchRunsStale, recordWorkbenchRun } from './workbench_runs';
 
 export const RESULT_MIME = 'application/vnd.cascaqit.result+json';
 
@@ -86,6 +87,10 @@ export class JobController {
   }
 
   markDocumentChanged(): void {
+    const panel = this.options.panel();
+    if (panel !== null) {
+      markWorkbenchRunsStale(panel, this.options.document().document_id);
+    }
     this.stopPolling();
     this.tracking = false;
     this.current = {
@@ -241,6 +246,7 @@ export class JobController {
       diagnostics: diagnosticMessages(value.diagnostics)
     };
     this.tracking = !TERMINAL_STATES.has(state);
+    recordWorkbenchRun(panel, accepted, this.current);
     this.options.changed();
   }
 

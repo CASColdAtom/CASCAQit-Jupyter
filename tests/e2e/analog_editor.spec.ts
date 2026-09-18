@@ -247,10 +247,19 @@ test('compiles, runs, restores, validates, and detaches an Analog program', asyn
     .filter({ hasText: 'MockNeutralAtomTarget' })
     .first()
     .locator('.cm-content');
-  await restoredGenerated.click();
+  // Use the workbench navigation before editing a long code cell: its full
+  // content box can extend behind the narrow-screen editor sidebar.
+  if (!notebookFrontend) {
+    await page.getByRole('navigation', { name: '量子工作模式' })
+      .getByRole('button', { name: 'Notebook', exact: true }).click();
+  }
+  await restoredGenerated.click({ position: { x: 20, y: 10 } });
   await restoredGenerated.press('Control+End');
   await restoredGenerated.press('Enter');
   await restoredGenerated.type('# user Analog change');
+  if (!notebookFrontend) {
+    await openAnalogEditor(page);
+  }
   const phaseEnd = editor
     .locator('[data-object-path="editor_model.controls.phase"]')
     .getByLabel('End');

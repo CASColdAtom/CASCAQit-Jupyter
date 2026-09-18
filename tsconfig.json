@@ -10,7 +10,8 @@
     "rootDir": "labextension/src",
     "skipLibCheck": true,
     "strict": true,
-    "target": "ES2022"
+    "target": "ES2022",
+    "tsBuildInfoFile": "./lib/tsconfig.tsbuildinfo"
   },
   "include": [
     "labextension/src/**/*.ts"

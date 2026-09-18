@@ -31,6 +31,13 @@
   min-width: 280px;
 }
 
+.cascaqit-Editor:fullscreen {
+  width: 100vw !important;
+  height: 100vh !important;
+  min-width: 0 !important;
+  padding: 0 clamp(0px, 3vw, 48px);
+}
+
 .cascaqit-Editor *,
 .cascaqit-Editor *::before,
 .cascaqit-Editor *::after {
@@ -1106,7 +1113,9 @@
 /* Quantum Cloud visual language. Keep these tokens scoped to CASCAQit surfaces so
    the extension follows the cloud console without replacing the user's Lab theme. */
 .cascaqit-Editor,
-.cascaqit-Renderer {
+.cascaqit-Renderer,
+.cascaqit-Workbench,
+.cascaqit-Workbench-nav {
   --cascaqit-primary: #165dff;
   --cascaqit-primary-hover: #0e42d2;
   --cascaqit-primary-tint: #e8f3ff;
@@ -1132,6 +1141,98 @@
   font-family: 'PingFang SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial,
     sans-serif;
   letter-spacing: 0;
+}
+
+/* Workbench surfaces reuse the Quantum Cloud semantic palette. */
+.cascaqit-Workbench {
+  overflow: auto;
+  background: var(--cascaqit-canvas);
+  min-width: 0;
+}
+
+.cascaqit-Workbench *, .cascaqit-Workbench-nav * { box-sizing: border-box; }
+.cascaqit-Workbench h1, .cascaqit-Workbench h2, .cascaqit-Workbench h3 { color: var(--cascaqit-text); }
+.cascaqit-Workbench p { line-height: 1.7; }
+.cascaqit-Workbench-hero {
+  padding: clamp(24px, 5vw, 64px);
+  border-bottom: 1px solid var(--cascaqit-border);
+  background: linear-gradient(115deg, var(--cascaqit-surface) 35%, var(--cascaqit-primary-tint));
+}
+.cascaqit-Workbench-hero h1 { margin: 18px 0; font-size: clamp(24px, 3vw, 38px); font-weight: 650; }
+.cascaqit-Workbench-eyebrow { color: var(--cascaqit-primary); letter-spacing: 2px; font-size: 11px; font-weight: 650; }
+.cascaqit-Workbench-hero > p:not(.cascaqit-Workbench-eyebrow) { color: var(--cascaqit-muted); font-size: 14px; }
+.cascaqit-Workbench-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 28px; }
+.cascaqit-Workbench-badges span {
+  padding: 5px 10px; border: 1px solid var(--cascaqit-border); border-radius: 5px;
+  background: var(--cascaqit-surface); color: var(--cascaqit-text-secondary); font-size: 12px;
+}
+.cascaqit-Workbench-content { max-width: 1200px; padding: 24px clamp(20px, 5vw, 64px) 48px; margin: auto; }
+.cascaqit-Workbench-content h2 { font-size: 17px; font-weight: 600; margin: 10px 0 20px; }
+.cascaqit-Workbench-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); gap: 20px; }
+.cascaqit-Workbench-card {
+  border: 1px solid var(--cascaqit-border); border-radius: 12px; padding: 24px;
+  background: var(--cascaqit-surface); box-shadow: 0 3px 14px rgb(29 33 41 / 3%);
+}
+.cascaqit-Workbench-card h3 { font-size: 19px; margin: 20px 0 8px; }
+.cascaqit-Workbench-card p { color: var(--cascaqit-muted); margin: 0 0 24px; }
+.cascaqit-Workbench-art {
+  margin: 0; padding: 18px; min-height: 104px; font-size: 18px; line-height: 1.45;
+  border-radius: 8px; color: var(--cascaqit-primary); background: var(--cascaqit-primary-tint);
+  font-family: var(--jp-code-font-family, monospace);
+}
+.cascaqit-Workbench-art.is-analog { color: var(--cascaqit-control); background: var(--cascaqit-canvas); }
+.cascaqit-Workbench-guide { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 20px; margin-bottom: 24px; }
+.cascaqit-Workbench-guide h3 { font-size: 13px; }
+.cascaqit-Workbench-guide p { color: var(--cascaqit-muted); font-size: 12px; }
+.cascaqit-Workbench-button {
+  appearance: none; min-height: 32px; padding: 6px 12px; border: 1px solid var(--cascaqit-border);
+  border-radius: 6px; background: var(--cascaqit-surface); color: var(--cascaqit-text);
+  font: inherit; font-size: 12px; cursor: pointer;
+}
+.cascaqit-Workbench-button:hover { background: var(--cascaqit-hover); border-color: var(--cascaqit-border-strong); }
+.cascaqit-Workbench-button:focus-visible { outline: 2px solid var(--cascaqit-primary); outline-offset: 2px; }
+.cascaqit-Workbench-button:disabled { opacity: .5; cursor: not-allowed; }
+.cascaqit-Workbench-button.is-primary, .cascaqit-Workbench-execution button {
+  background: var(--cascaqit-primary); border-color: var(--cascaqit-primary); color: var(--cascaqit-surface);
+}
+.cascaqit-Workbench-button.is-primary:hover { background: var(--cascaqit-primary-hover); }
+.cascaqit-Workbench-nav {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 8px 12px; border-bottom: 1px solid var(--cascaqit-border); min-width: 0;
+}
+.cascaqit-Workbench-nav nav { display: flex; flex-wrap: wrap; gap: 4px; }
+.cascaqit-Workbench-nav nav button { border-color: transparent; padding: 5px 8px; }
+.cascaqit-Workbench-nav nav button[aria-pressed='true'] { color: var(--cascaqit-primary); background: var(--cascaqit-primary-tint); }
+.cascaqit-Workbench-execution { display: flex; align-items: center; gap: 12px; }
+.cascaqit-Workbench-status { color: var(--cascaqit-muted); font: 11px var(--jp-code-font-family, monospace); }
+.cascaqit-Workbench-feedback { width: 100%; color: var(--cascaqit-text-secondary); overflow-wrap: anywhere; }
+.cascaqit-Workbench-detail { padding: 24px; }
+.cascaqit-Workbench-dialog {
+  width: min(1200px, calc(100vw - 32px)); height: calc(100vh - 64px);
+  max-width: none; max-height: none; border: 1px solid var(--cascaqit-border);
+  border-radius: 12px;
+}
+.cascaqit-Workbench-dialog::backdrop { background: rgb(29 33 41 / 35%); }
+.cascaqit-Workbench-detailHeader { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+.cascaqit-Workbench-detail h2 { font-size: 20px; }
+.cascaqit-Workbench-detail pre { white-space: pre-wrap; overflow-wrap: anywhere; padding: 16px; background: var(--cascaqit-surface); border-radius: 8px; }
+.cascaqit-Workbench-hint { font-size: 12px; color: var(--cascaqit-muted); overflow-wrap: anywhere; }
+.cascaqit-Workbench-result { margin-top: 20px; min-width: 0; }
+.cascaqit-Workbench-result > button { margin-bottom: 8px; }
+.cascaqit-Workbench-empty { padding: 48px 24px; margin-top: 24px; background: var(--cascaqit-surface); border-radius: 8px; line-height: 1.8; }
+.cascaqit-Presentation .jp-CodeCell .jp-Cell-inputWrapper,
+.cascaqit-Presentation .jp-Cell-inputCollapser,
+.cascaqit-Presentation .jp-OutputPrompt,
+.cascaqit-Presentation .jp-CellHeader,
+.cascaqit-Presentation .jp-CellFooter,
+.cascaqit-Presentation .jp-Cell .jp-cell-toolbar { display: none !important; }
+.cascaqit-Presentation .jp-Notebook { background: var(--jp-layout-color1); }
+.cascaqit-Presentation .jp-Notebook .jp-Cell { max-width: 1200px; margin-left: auto; margin-right: auto; }
+.cascaqit-Presentation .jp-Cell-outputWrapper { margin-left: 0; }
+@media (max-width: 700px) {
+  .cascaqit-Workbench-nav { padding: 8px; }
+  .cascaqit-Workbench-execution { width: 100%; justify-content: space-between; }
+  .cascaqit-Workbench-detail { padding: 16px; }
 }
 
 .cascaqit-Renderer {
