@@ -82,8 +82,10 @@ test('home creates a fresh notebook and code reports actual availability', async
   await home.getByRole('button', { name: '浏览项目文件', exact: true }).click();
   await expect(page.locator('#filebrowser')).toBeVisible();
   await page.getByRole('tab', { name: /File Browser/ }).click();
-  await home.getByRole('button', { name: '新建 Digital 实验', exact: true }).focus();
-  await expect(home.getByRole('button', { name: '新建 Digital 实验', exact: true })).toBeFocused();
+  await home.getByRole('button', { name: '创建 Digital 实验', exact: true }).focus();
+  await expect(home.getByRole('button', { name: '创建 Digital 实验', exact: true })).toBeFocused();
+  expect(await home.getByRole('button', { name: '创建 Digital 实验', exact: true })
+    .evaluate(n => parseFloat(getComputedStyle(n).fontSize))).toBeGreaterThanOrEqual(16);
   await page.screenshot({ path: `artifacts/screenshots/${info.project.name}-workbench-home.png` });
   if (info.project.name === 'lab-narrow') {
     await page.setViewportSize({ width: 375, height: 812 });

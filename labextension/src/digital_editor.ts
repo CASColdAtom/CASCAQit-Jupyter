@@ -330,11 +330,11 @@ export class DigitalEditorWidget extends Widget {
     });
     fields.append(terminalLabel, key);
     section.append(fields);
-    const hint = element('p', 'cascaqit-Editor-measurementHint');
-    hint.textContent = this.document.editor_model.measurement.terminal
-        ? '已启用末端测量：对全部量子比特测量，预览中的 M 对应 measure_all()。'
-        : '末端测量已关闭；生成并运行采样线路前请重新启用。';
-    section.append(hint);
+    if (!this.document.editor_model.measurement.terminal) {
+      const hint = element('p', 'cascaqit-Editor-measurementHint');
+      hint.textContent = '运行采样线路前需启用末端测量。';
+      section.append(hint);
+    }
     return section;
   }
 

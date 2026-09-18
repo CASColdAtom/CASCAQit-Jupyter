@@ -92,75 +92,49 @@ export function createWorkbenchHome(
     const model = await app.serviceManager.contents.newUntitled({ type: 'notebook' });
     await app.serviceManager.contents.save(model.path, { type: 'notebook', format: 'json', content: template });
     if (!documents.openOrReveal(model.path)) { throw new Error('无法打开创建的 Notebook'); }
-    feedback.textContent = `已创建 ${model.path}，内核就绪后可运行全部单元格。`;
+    feedback.hidden = true;
   };
   const top = el('header', 'top');
   const brand = el('div', 'brand', 'CASCAQit');
   brand.append(el('span', '', '量子工作台'));
-  top.append(brand, el('span', 'context', '本地工作空间 / JupyterLab'));
+  top.append(brand);
   const main = el('main', 'main');
   const welcome = el('section', 'welcome');
-  const intro = el('div');
-  intro.append(el('p', 'eyebrow', 'QUANTUM WORKSPACE'), el('h1', '', '开始下一次量子实验'),
-    el('p', 'description', '从线路构建到结果分析，在一个工作空间完成。'));
-  const actions = el('div', 'actions');
-  actions.append(action('新建 Digital 实验', () => create('digital'), true),
+  welcome.append(el('h1', '', '新建实验'),
     action('浏览项目文件', () => app.commands.execute('filebrowser:activate')));
-  intro.append(actions);
-  const flow = el('div', 'flow');
-  flow.setAttribute('aria-label', '实验流程');
-  for (const [index, title, detail] of [
-    ['01', '构建', 'Notebook / 线路编辑'], ['02', '运行', '本地量子模拟'], ['03', '分析', '可视化 / 演示']
-  ]) {
-    const step = el('div', 'flowStep');
-    step.append(el('span', 'stepNumber', index), el('strong', '', title), el('span', '', detail));
-    flow.append(step);
-  }
-  welcome.append(intro, flow);
   main.append(welcome, feedback);
-  const heading = el('div', 'sectionHeading');
-  heading.append(el('h2', '', '实验模板'), el('span', '', '内置示例 · 可直接运行'));
   const templates = el('div', 'templates');
   for (const kind of ['digital', 'analog'] as const) {
     const digital = kind === 'digital';
     const card = el('article', `template ${PREFIX}-template-${kind}`);
-    const label = el('div', 'templateLabel');
-    label.append(el('span', 'tag', digital ? 'DIGITAL' : 'ANALOG'), el('span', '', digital ? '门模型' : '中性原子'));
     const art = el('div', 'art');
     art.append(illustration(kind));
     const body = el('div', 'templateBody');
-    body.append(el('h3', '', digital ? 'Bell 纠缠实验' : '双原子 Analog 实验'),
-      el('p', '', digital ? '从 H 与 CX 门构建纠缠态，观察末端测量分布。' : '设置原子间距与驱动波形，观察 Rydberg 态演化。'));
-    const foot = el('div', 'templateFoot');
-    foot.append(el('span', '', digital ? '2 量子比特 · 含测量' : '2 原子 · 1.2 μs'),
+    body.append(el('h2', '', digital ? 'Bell 纠缠实验' : '双原子实验'),
       action(digital ? '创建 Digital 实验' : '创建 Analog 实验', () => create(kind)));
-    body.append(foot);
-    card.append(label, art, body);
+    card.append(art, body);
     templates.append(card);
   }
-  main.append(heading, templates);
+  main.append(templates);
   const lower = el('div', 'lower');
   const project = el('section', 'panel');
   const projectHead = el('div', 'sectionHeading');
-  projectHead.append(el('h2', '', '项目 Notebook'), el('span', '', '根目录 · 最近修改'));
+  projectHead.append(el('h2', '', '项目 Notebook'));
   const files = el('div', 'files');
   files.setAttribute('aria-label', '项目 Notebook');
   project.append(projectHead, files);
-  const environment = el('section', 'panel');
-  const envHead = el('div', 'sectionHeading');
-  envHead.append(el('h2', '', '开发环境'));
+  const environment = el('details', 'environment');
+  const envHead = el('summary', '', '开发环境');
   const capabilities = el('div', 'capabilities');
   capabilities.setAttribute('role', 'status');
   environment.append(envHead, capabilities);
+  const tools = el('div', 'tools');
+  tools.append(environment);
   if (app.commands.hasCommand('terminal:create-new')) {
-    environment.append(action('打开终端', () => app.commands.execute('terminal:create-new')));
+    tools.append(action('打开终端', () => app.commands.execute('terminal:create-new')));
   }
-  lower.append(project, environment);
+  lower.append(project, tools);
   main.append(lower);
-  const footer = el('footer', 'footer');
-  footer.append(el('span', '', 'CASCAQit · Quantum programming'),
-    el('span', '', '实验保存为 .ipynb，可随时继续编辑'));
-  main.append(footer);
   widget.node.append(top, main);
   let generation = 0;
   const refresh = async (): Promise<void> => {
@@ -182,10 +156,10 @@ export function createWorkbenchHome(
             const row = action(file.name, () => documents.openOrReveal(file.path));
             row.classList.add(`${PREFIX}-file`);
             row.title = file.path;
-            row.replaceChildren(el('span', 'fileIcon', 'N'), el('span', 'fileName', file.name));
+            row.replaceChildren(el('span', 'fileName', file.name));
             const time = el('time', '', new Date(file.last_modified).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }));
             time.dateTime = file.last_modified;
-            row.append(time, el('span', 'fileArrow', '↗'));
+            row.append(time);
             files.append(row);
           }
         } catch {
